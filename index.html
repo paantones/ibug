@@ -213,6 +213,7 @@ let bereich = null;      // aktuell geöffneter Bereich
 let stand = 0;
 let offenePlus = 0;      // eigene Klicks, die noch nicht bestätigt sind
 let kanal = null;
+let abgleichTimer = null;
 let bearbeiten = false;
 let wakeLock = null;
 
@@ -359,11 +360,39 @@ async function raumOeffnen(b) {
   bildschirmWach();
 
   if (kanal) await sb.removeChannel(kanal);
-  kanal = sb.channel(`area:${b.id}`)
+  await abonnieren();
+  clearInterval(abgleichTimer);
+  abgleichTimer = setInterval(abgleichen, 15000);
+}
+
+/* Live-Verbindung zum Bereich. Bricht sie ab, wird neu verbunden –
+   sonst friert die Zahl unbemerkt ein. */
+async function abonnieren() {
+  if (!bereich) return;
+  if (kanal) { await sb.removeChannel(kanal); kanal = null; }
+  const id = bereich.id;
+  kanal = sb.channel(`area:${id}`)
     .on('postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'count_events', filter: `area_id=eq.${b.id}` },
+      { event: 'INSERT', schema: 'public', table: 'count_events', filter: `area_id=eq.${id}` },
       (p) => { if (offenePlus === 0) { stand = p.new.resulting_count; zeichne(); } })
-    .subscribe();
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') { verbindung(true); abgleichen(); }
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        verbindung(false);
+        setTimeout(abonnieren, 2000);
+      }
+    });
+}
+
+/* Sicherheitsnetz alle 15 s: holt den echten Stand aus der Datenbank,
+   überschreibt aber nie eigene Klicks, die noch unterwegs sind. */
+async function abgleichen() {
+  if (!bereich || offenePlus > 0) return;
+  const { data, error } = await sb
+    .from('area_status').select('current_count').eq('id', bereich.id).maybeSingle();
+  verbindung(!error);
+  if (error || !data || offenePlus > 0) return;
+  if (data.current_count !== stand) { stand = data.current_count; zeichne(); }
 }
 
 function zeichne(puls) {
@@ -416,6 +445,8 @@ $('reset-yes').onclick = async () => {
 };
 
 $('room-back').onclick = async () => {
+  bereich = null;
+  clearInterval(abgleichTimer);
   if (kanal) { await sb.removeChannel(kanal); kanal = null; }
   bildschirmFrei();
   zeige('list');
@@ -428,7 +459,10 @@ async function bildschirmWach() {
 }
 function bildschirmFrei() { if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; } }
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && $('room').classList.contains('on')) bildschirmWach();
+  if (document.visibilityState !== 'visible') return;
+  if (!bereich || !$('room').classList.contains('on')) return;
+  bildschirmWach();
+  abonnieren();   // Verbindung kann im Hintergrund abgebaut worden sein
 });
 
 /* ================================================================
@@ -539,7 +573,7 @@ function verlaufSvg(rows, tag) {
 if (localStorage.getItem('inug:unlocked') === '1') entsperrt();
 else $('pw').focus();
 
-window.addEventListener('online',  () => verbindung(true));
+window.addEventListener('online',  () => { verbindung(true); abonnieren(); });
 window.addEventListener('offline', () => verbindung(false));
 </script>
 </body>
