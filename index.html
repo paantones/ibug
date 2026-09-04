@@ -63,6 +63,12 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 .bar{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:14px}
 .bar>i{display:block;height:100%;border-radius:99px;background:#00C853;transition:width .2s}
 .del{border:1px solid #FF1744;color:#FF1744;border-radius:10px;padding:0 16px;font-size:.9rem;font-weight:700}
+/* Schmale Spalte neben der Bereichskarte – eine Schaltfläche lässt sich
+   nicht in eine andere schachteln, deshalb steht sie daneben. */
+.stat-btn{flex:0 0 56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--dim);font-size:.62rem;font-weight:700}
+.stat-btn svg{width:20px;height:20px}
+.stat-btn:active{border-color:var(--text);color:var(--text)}
 .empty{border:1px dashed var(--line);border-radius:10px;padding:24px}
 .empty b{display:block;margin-bottom:4px}
 .form{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:20px}
@@ -537,6 +543,18 @@ async function bereicheLaden() {
     card.querySelector('.card-name').textContent = b.name;
     card.onclick = () => eingaengeOeffnen(b);
     row.appendChild(card);
+
+    const stat = document.createElement('button');
+    stat.className = 'stat-btn';
+    stat.title = t('room.stats');
+    stat.setAttribute('aria-label', `${t('room.stats')} \u2013 ${b.name}`);
+    stat.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+        <path d="M5 20V12M12 20V5M19 20v-5"/></svg><span></span>`;
+    stat.querySelector('span').textContent = t('room.stats');
+    stat.onclick = () => statistikOeffnen(b, 'list');
+    row.appendChild(stat);
+
     box.appendChild(row);
   });
 
@@ -959,14 +977,23 @@ document.addEventListener('visibilitychange', () => {
 /* ================================================================
    Statistik
    ================================================================ */
-$('room-stats').onclick = () => {
-  $('stats-title').textContent = bereich.name;
+let statsHerkunft = 'room';   // wohin der Zurück-Knopf führt
+
+function statistikOeffnen(b, herkunft) {
+  bereich = b;
+  statsHerkunft = herkunft;
+  $('stats-title').textContent = b.name;
   $('stats-day').value = tagVon();
   $('stats-day').max = tagVon();
   zeige('stats');
   statistikLaden();
+}
+
+$('room-stats').onclick = () => statistikOeffnen(bereich, 'room');
+$('stats-back').onclick = () => {
+  if (statsHerkunft === 'room') { zeige('room'); zeichne(); tuerenZeichnen(); }
+  else { zeige('list'); bereicheLaden(); }
 };
-$('stats-back').onclick = () => { zeige('room'); zeichne(); };
 $('stats-day').onchange = statistikLaden;
 
 async function statistikLaden() {
