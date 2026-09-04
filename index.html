@@ -145,6 +145,12 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 .chip .pip{width:7px;height:7px;border-radius:99px;flex:0 0 7px;background:currentColor;opacity:.5}
 .chip.taken .pip{opacity:1}
 
+/* Dieselben Chips, aber auf dunklem Panel statt auf der Signalfarbe */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chips:empty{display:none}
+.chips .chip{background:rgba(255,255,255,.07);color:var(--text);font-size:.75rem;padding:5px 10px}
+.chips .chip.mine{background:var(--text);color:var(--ink)}
+
 /* Übernahme- und Namensdialog */
 .sheet{position:fixed;inset:0;background:rgba(8,12,16,.72);display:flex;align-items:center;
   justify-content:center;padding:20px;z-index:50}
@@ -191,7 +197,6 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
   <div class="wrap">
     <div class="head">
       <h1 data-i18n="list.heading"></h1>
-      <button id="edit-toggle" class="dim hidden" style="font-size:.9rem"></button>
     </div>
     <div id="areas"></div>
     <div id="list-error" class="empty hidden" style="border-color:#FF1744">
@@ -202,16 +207,6 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
       <b data-i18n="list.emptyTitle"></b>
       <span class="dim" style="font-size:.9rem" data-i18n="list.emptyText"></span>
     </div>
-
-    <div id="new-form" class="form hidden">
-      <input id="new-name" data-i18n-ph="list.name">
-      <input id="new-max" inputmode="numeric" data-i18n-ph="list.max">
-      <div class="form-actions">
-        <button id="new-save" class="big-btn" data-i18n="list.create"></button>
-        <button id="new-cancel" class="cancel" data-i18n="list.cancel"></button>
-      </div>
-    </div>
-    <button id="new-open" class="ghost-btn" data-i18n="list.newArea"></button>
 
     <div class="langrow" style="margin-top:28px">
       <label for="lang-list" data-i18n="lock.language"></label>
@@ -355,7 +350,6 @@ function spracheAnwenden() {
   });
 
   // Texte, die von Zustand oder Zahlen abhaengen
-  $('edit-toggle').textContent = t(bearbeiten ? 'list.done' : 'list.edit');
   document.querySelectorAll('.lang').forEach(sel => { sel.value = sprache; });
   if (bereich && $('room').classList.contains('on')) { zeichne(); tuerenZeichnen(); }
   if (bereich && $('stats').classList.contains('on')) statistikLaden();
@@ -402,8 +396,10 @@ let bannerTimer = null;
 const GEDULD = 2500;     // ms, bevor ein liegengebliebener Klick gemeldet wird
 let kanal = null;
 let abgleichTimer = null;
-let bearbeiten = false;
 let wakeLock = null;
+let listeTueren = [];      // alle Eingänge, für die Anzeige in der Bereichsliste
+let listeKanal = null;
+let listeTimer = null;
 let eingang = null;        // { id, name } – der belegte Eingang
 let zaehlerName = '';      // wer steht gerade an dieser Tür
 let entKanal = null;       // Live-Verbindung zu den Belegungen
@@ -473,6 +469,7 @@ function banner() {
 function entsperrt() {
   zeige('list');
   bereicheLaden();
+  listeBeobachten();
 }
 $('pw-go').onclick = () => {
   if ($('pw').value.trim() === PASSWORT) {
@@ -497,15 +494,21 @@ function zustand(c, max, warnProzent = 80) {
 const AKZENT = { ok:'#00C853', warn:'#FFC400', full:'#FF1744' };
 
 async function bereicheLaden() {
-  const { data, error } = await sb.from('area_status').select('*').order('name');
+  const [bereiche, tueren] = await Promise.all([
+    sb.from('area_status').select('*').order('name'),
+    sb.from('entrances').select('*').order('name'),
+  ]);
+  const error = bereiche.error || tueren.error;
   verbindung(!error);
   $('list-error').classList.toggle('hidden', !error);
   if (error) { $('area-empty').classList.add('hidden'); return; }
 
+  listeTueren = tueren.data || [];
+  const data = bereiche.data;
+
   const box = $('areas');
   box.innerHTML = '';
   $('area-empty').classList.toggle('hidden', data.length > 0);
-  $('edit-toggle').classList.toggle('hidden', data.length === 0);
 
   data.forEach(b => {
     const z = zustand(b.current_count, b.max_guests, b.warn_percent);
@@ -523,52 +526,55 @@ async function bereicheLaden() {
           ${b.current_count}<span class="dim" style="font-size:.85rem;font-weight:500"> / ${b.max_guests}</span>
         </span>
       </div>
-      <div class="bar"><i style="width:${pct}%;background:${AKZENT[z]}"></i></div>`;
+      <div class="bar"><i style="width:${pct}%;background:${AKZENT[z]}"></i></div>
+      <div class="chips" data-area="${b.id}"></div>`;
     card.querySelector('.card-name').textContent = b.name;
     card.onclick = () => eingaengeOeffnen(b);
     row.appendChild(card);
-
-    if (bearbeiten) {
-      const del = document.createElement('button');
-      del.className = 'del';
-      del.textContent = t('list.delete');
-      del.onclick = async () => {
-        if (!confirm(t('list.deleteConfirm', { name: b.name }))) return;
-        await sb.from('areas').delete().eq('id', b.id);
-        bereicheLaden();
-      };
-      row.appendChild(del);
-    }
     box.appendChild(row);
+  });
+
+  chipsZeichnen();
+}
+
+/* Füllt nur die Chip-Leisten neu, nicht die ganzen Karten. Dadurch altert
+   "aktiv vor X Min." mit, ohne dass ein Fingertipp ins Leere geht, weil
+   die Schaltfläche darunter gerade neu gebaut wurde. */
+function chipsZeichnen() {
+  document.querySelectorAll('.chips[data-area]').forEach(box => {
+    const tueren = listeTueren.filter(e => e.area_id === box.dataset.area);
+    box.innerHTML = '';
+    for (const e of tueren) {
+      const selbst = e.holder_token === TOKEN;
+      const besetzt = !!e.holder_token;
+      const c = document.createElement('span');
+      c.className = 'chip' + (selbst ? ' mine' : '') + (besetzt ? ' taken' : '');
+      c.innerHTML = '<span class="pip"></span><span class="nm"></span><span class="who"></span>';
+      c.querySelector('.nm').textContent = e.name;
+      c.querySelector('.who').textContent = besetzt
+        ? (e.held_by || '?') + (selbst ? '' : ' \u00b7 ' + seit(e.last_seen))
+        : t('ent.free');
+      box.appendChild(c);
+    }
   });
 }
 
-$('edit-toggle').onclick = () => {
-  bearbeiten = !bearbeiten;
-  $('edit-toggle').textContent = t(bearbeiten ? 'list.done' : 'list.edit');
-  bereicheLaden();
-};
-$('new-open').onclick = () => {
-  $('new-form').classList.remove('hidden');
-  $('new-open').classList.add('hidden');
-  $('new-name').focus();
-};
-$('new-cancel').onclick = () => {
-  $('new-form').classList.add('hidden');
-  $('new-open').classList.remove('hidden');
-};
-$('new-max').oninput = (e) => { e.target.value = e.target.value.replace(/\D/g, ''); };
-$('new-max').onkeydown = (e) => { if (e.key === 'Enter') $('new-save').click(); };
-$('new-save').onclick = async () => {
-  const name = $('new-name').value.trim();
-  const max = parseInt($('new-max').value, 10);
-  if (!name || !max || max < 1) return;
-  const { error } = await sb.from('areas').insert({ name, max_guests: max });
-  if (error) { alert(t('list.createFailed', { msg: error.message })); return; }
-  $('new-name').value = ''; $('new-max').value = '';
-  $('new-cancel').click();
-  bereicheLaden();
-};
+/* Belegungen aller Bereiche live mitlesen, solange die Liste offen ist. */
+function listeBeobachten() {
+  if (listeKanal) return;
+  listeKanal = sb.channel('entrances:alle')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'entrances' }, async () => {
+      if (!$('list').classList.contains('on')) return;
+      const { data } = await sb.from('entrances').select('*').order('name');
+      if (data) { listeTueren = data; chipsZeichnen(); }
+    })
+    .subscribe();
+
+  clearInterval(listeTimer);
+  listeTimer = setInterval(() => {
+    if ($('list').classList.contains('on')) chipsZeichnen();
+  }, 10000);
+}
 
 /* ================================================================
    Eingang wählen und belegen
@@ -963,29 +969,49 @@ async function statistikLaden() {
   const body = $('stats-body');
   body.innerHTML = `<p class="dim">${t('stats.loading')}</p>`;
 
-  const [{ data: s, error: e1 }, { data: h, error: e2 }] = await Promise.all([
-    sb.rpc('day_stats',   { p_area_id: bereich.id, p_day: tag, p_tz: ZEITZONE }),
-    sb.rpc('day_history', { p_area_id: bereich.id, p_day: tag, p_tz: ZEITZONE }),
+  const arg = { p_area_id: bereich.id, p_day: tag, p_tz: ZEITZONE };
+  const [kpi, verlauf, stunden, tueren, leute, tage] = await Promise.all([
+    sb.rpc('day_stats', arg),
+    sb.rpc('day_history', arg),
+    sb.rpc('day_by_hour', arg),
+    sb.rpc('day_by_entrance', arg),
+    sb.rpc('day_by_person', arg),
+    sb.rpc('recent_days', { p_area_id: bereich.id, p_day: tag, p_days: 7, p_tz: ZEITZONE }),
   ]);
 
-  if (e1 || e2) { body.innerHTML = `<p class="dim">${t('stats.loadError')}</p>`; return; }
-  const k = Array.isArray(s) ? s[0] : s;
-  if (!k || !k.first_at || !h || h.length === 0) {
+  if (kpi.error || verlauf.error) {
+    body.innerHTML = `<p class="dim">${t('stats.loadError')}</p>`;
+    return;
+  }
+
+  const k = Array.isArray(kpi.data) ? kpi.data[0] : kpi.data;
+  const h = verlauf.data || [];
+  if (!k || !k.first_at || h.length === 0) {
     body.innerHTML = `<div class="empty"><b>${t('stats.noDataTitle')}</b>
       <span class="dim" style="font-size:.9rem">${t('stats.noDataText')}</span></div>`;
     return;
   }
 
-  const schnitt = zahl(Number(k.avg_occupancy), 1);
   const peakRot = k.peak >= bereich.max_guests;
+  const stoss = k.busiest_hour === null || k.busiest_hour === undefined;
 
   body.innerHTML = `
     <div class="grid">
-      <div class="kpi"><div class="n tabular" style="color:#00C853">${zahl(k.total_in)}</div><div class="l">${t('stats.totalIn')}</div></div>
-      <div class="kpi"><div class="n tabular" style="color:#FFC400">${zahl(k.total_out)}</div><div class="l">${t('stats.totalOut')}</div></div>
-      <div class="kpi"><div class="n tabular">${schnitt}</div><div class="l">${t('stats.average')}</div></div>
-      <div class="kpi"><div class="n tabular" style="${peakRot ? 'color:#FF1744' : ''}">${zahl(k.peak)}</div><div class="l">${t('stats.peak', { time: uhr(k.peak_at) })}</div></div>
+      ${kachel(zahl(k.total_in),  t('stats.totalIn'),  '#00C853')}
+      ${kachel(zahl(k.total_out), t('stats.totalOut'), '#FFC400')}
+      ${kachel(zahl(Number(k.avg_occupancy), 1), t('stats.average'))}
+      ${kachel(zahl(k.peak), t('stats.peak', { time: uhr(k.peak_at) }), peakRot ? '#FF1744' : '')}
+      ${kachel(zahl(k.still_inside), t('stats.stillInside'))}
+      ${kachel(
+         stoss ? '–' : zahl(k.busiest_hour_in),
+         stoss ? t('stats.noHour')
+               : t('stats.busiestHour', {
+                   from: zwei(k.busiest_hour) + ':00',
+                   to:   zwei((k.busiest_hour + 1) % 24) + ':00' })
+       )}
+      ${k.full_seconds > 0 ? kachel(dauer(k.full_seconds), t('stats.atCapacity'), '#FF1744') : ''}
     </div>
+
     <div class="chart">
       <div class="chart-head">
         <span style="font-weight:700">${t('stats.history')}</span>
@@ -995,7 +1021,138 @@ async function statistikLaden() {
       <p class="dim" style="font-size:.75rem;margin-top:12px;line-height:1.5">
         ${t('stats.footnote', { max: bereich.max_guests })}
       </p>
+    </div>
+
+    ${stundenBlock(stunden.data)}
+    ${aufteilung(tueren.data, t('stats.byEntrance'), 'name')}
+    ${aufteilung(leute.data,  t('stats.byPerson'),  'person', t('stats.noPersonData'))}
+    ${tageBlock(tage.data, tag)}`;
+}
+
+function kachel(wert, label, farbe) {
+  return `<div class="kpi">
+    <div class="n tabular" style="${farbe ? 'color:' + farbe : ''}">${wert}</div>
+    <div class="l">${label}</div></div>`;
+}
+
+/* Sekunden lesbar machen: unter einer Stunde nur Minuten. */
+function dauer(sek) {
+  const m = Math.max(1, Math.round(sek / 60));
+  return m < 60 ? t('stats.durM', { m })
+                : t('stats.durHM', { h: Math.floor(m / 60), m: m % 60 });
+}
+
+const GRUEN = '#00C853', GELB = '#FFC400';
+
+/* Rein und raus je Stunde. Zeigt, wann der Andrang kam – das sieht man
+   am reinen Belegungsverlauf nicht, weil sich rein und raus dort aufheben. */
+function stundenBlock(rows) {
+  if (!rows || rows.length === 0) return '';
+  const von = rows[0].hour, bis = rows[rows.length - 1].hour;
+  const stunden = [];
+  for (let i = von; i <= bis; i++) {
+    const r = rows.find(x => x.hour === i);
+    stunden.push({ h: i, ein: r ? r.went_in : 0, aus: r ? r.went_out : 0 });
+  }
+
+  const W = 620, H = 190, T = 8, B = 26, L = 4;
+  const max = Math.max(1, ...stunden.map(s => Math.max(s.ein, s.aus)));
+  const breite = (W - L * 2) / stunden.length;
+  const bh = (v) => (v / max) * (H - T - B);
+
+  let balken = '', achse = '';
+  stunden.forEach((s, i) => {
+    const x = L + i * breite;
+    const w = Math.max(2, breite / 2 - 3);
+    const yE = H - B - bh(s.ein), yA = H - B - bh(s.aus);
+    balken += `<rect x="${x + 2}" y="${yE}" width="${w}" height="${bh(s.ein)}" fill="${GRUEN}" rx="2"/>`;
+    balken += `<rect x="${x + w + 5}" y="${yA}" width="${w}" height="${bh(s.aus)}" fill="${GELB}" rx="2"/>`;
+    // Nicht jede Stunde beschriften, sonst überlappt es auf schmalen Geräten
+    if (stunden.length <= 8 || i % Math.ceil(stunden.length / 6) === 0) {
+      achse += `<text x="${x + breite / 2}" y="${H - 8}" fill="#93A4B2" font-size="11"
+                 text-anchor="middle">${zwei(s.h)}</text>`;
+    }
+  });
+
+  return `<div class="chart" style="margin-top:16px">
+    <div class="chart-head">
+      <span style="font-weight:700">${t('stats.byHour')}</span>
+      <span style="font-size:.8rem">
+        <span style="color:${GRUEN}">\u25a0</span> ${t('stats.in')}
+        <span style="color:${GELB};margin-inline-start:10px">\u25a0</span> ${t('stats.out')}
+      </span>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" dir="ltr"
+         aria-label="${t('stats.byHour')}">
+      <line x1="0" y1="${H - B}" x2="${W}" y2="${H - B}" stroke="#31404E" stroke-width="1"/>
+      ${balken}${achse}
+    </svg>
+  </div>`;
+}
+
+/* Aufteilung nach Tür oder Person, mit Anteilsbalken. */
+function aufteilung(rows, titel, feld, leerText) {
+  if (!rows || rows.length === 0) {
+    return leerText
+      ? `<div class="chart" style="margin-top:16px">
+           <div class="chart-head"><span style="font-weight:700">${titel}</span></div>
+           <p class="dim" style="font-size:.85rem">${leerText}</p></div>`
+      : '';
+  }
+  const max = Math.max(1, ...rows.map(r => r.went_in));
+  const zeilen = rows.map(r => {
+    const pct = (r.went_in / max) * 100;
+    const name = String(r[feld] ?? '?').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    return `<div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;gap:12px;font-size:.9rem">
+        <span style="font-weight:700">${name}</span>
+        <span class="tabular dim">
+          <span style="color:${GRUEN}">${zahl(r.went_in)}</span> ${t('stats.in')} \u00b7
+          <span style="color:${GELB}">${zahl(r.went_out)}</span> ${t('stats.out')}
+        </span>
+      </div>
+      <div class="bar" style="margin-top:6px"><i style="width:${pct}%;background:${GRUEN}"></i></div>
     </div>`;
+  }).join('');
+
+  return `<div class="chart" style="margin-top:16px">
+    <div class="chart-head"><span style="font-weight:700">${titel}</span></div>
+    ${zeilen}</div>`;
+}
+
+/* Die letzten sieben Tage im Vergleich – der gewählte Tag ist hervorgehoben. */
+function tageBlock(rows, tag) {
+  if (!rows || rows.length < 2) return '';
+  const W = 620, H = 150, T = 8, B = 24, L = 4;
+  const max = Math.max(1, ...rows.map(r => r.went_in));
+  const breite = (W - L * 2) / rows.length;
+
+  let balken = '', achse = '';
+  rows.forEach((r, i) => {
+    const x = L + i * breite;
+    const w = Math.max(4, breite - 10);
+    const hh = (r.went_in / max) * (H - T - B);
+    const dieser = r.day === tag;
+    balken += `<rect x="${x + 5}" y="${H - B - hh}" width="${w}" height="${hh}"
+                fill="${dieser ? GRUEN : '#31404E'}" rx="3"/>`;
+    balken += `<text x="${x + breite / 2}" y="${H - B - hh - 5}" fill="#93A4B2"
+                font-size="11" text-anchor="middle">${r.went_in}</text>`;
+    const d = new Date(r.day + 'T12:00:00');
+    achse += `<text x="${x + breite / 2}" y="${H - 7}" fill="${dieser ? '#F1EFE9' : '#93A4B2'}"
+               font-size="11" text-anchor="middle">${zwei(d.getDate())}.${zwei(d.getMonth() + 1)}.</text>`;
+  });
+
+  return `<div class="chart" style="margin-top:16px">
+    <div class="chart-head">
+      <span style="font-weight:700">${t('stats.recent')}</span>
+      <span class="dim" style="font-size:.8rem">${t('stats.in')}</span>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" dir="ltr"
+         aria-label="${t('stats.recent')}">
+      <line x1="0" y1="${H - B}" x2="${W}" y2="${H - B}" stroke="#31404E" stroke-width="1"/>
+      ${balken}${achse}
+    </svg>
+  </div>`;
 }
 
 function verlaufSvg(rows, tag) {
@@ -1090,10 +1247,6 @@ async function adminLaden() {
 function adminZeichnen() {
   const box = $('admin-body');
   box.innerHTML = '';
-  if (adminDaten.length === 0) {
-    box.innerHTML = `<div class="empty"><b>${t('admin.noAreas')}</b></div>`;
-    return;
-  }
 
   for (const a of adminDaten) {
     const k = document.createElement('div');
@@ -1109,7 +1262,10 @@ function adminZeichnen() {
         <div class="field"><label>${t('admin.warn')} (${t('admin.warnUnit')})</label>
           <input class="a-warn" inputmode="numeric" value="${a.warn_percent}"></div>
       </div>
-      <button class="big-btn a-save" style="margin-top:4px">${t('common.save')}</button>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:4px">
+        <button class="big-btn a-save" style="margin-top:0;flex:1">${t('common.save')}</button>
+        <button class="icon-btn a-del" style="color:#FF1744;border-color:#FF1744">${t('common.delete')}</button>
+      </div>
       <span class="ok-flash hidden">${t('common.saved')}</span>
 
       <div style="margin-top:22px;font-weight:700;font-size:.95rem">${t('admin.entrances')}</div>
@@ -1130,6 +1286,13 @@ function adminZeichnen() {
       Object.assign(a, { name, max_guests: max, warn_percent: warn });
       flash.classList.remove('hidden');
       setTimeout(() => flash.classList.add('hidden'), 1600);
+    };
+
+    k.querySelector('.a-del').onclick = async () => {
+      if (!confirm(t('list.deleteConfirm', { name: a.name }))) return;
+      const { error } = await sb.from('areas').delete().eq('id', a.id);
+      if (error) { alert(t('admin.saveFailed', { msg: error.message })); return; }
+      adminLaden();
     };
 
     // Türen
@@ -1184,6 +1347,32 @@ function adminZeichnen() {
 
     box.appendChild(k);
   }
+
+  // Neuen Bereich anlegen
+  const neu = document.createElement('div');
+  neu.className = 'admin-area';
+  neu.innerHTML = `
+    <div style="font-weight:700;margin-bottom:14px">${t('list.newArea')}</div>
+    <div class="field"><label>${t('admin.areaName')}</label><input class="n-name"></div>
+    <div class="two">
+      <div class="field"><label>${t('admin.capacity')}</label>
+        <input class="n-max" inputmode="numeric"></div>
+      <div class="field"><label>${t('admin.warn')} (${t('admin.warnUnit')})</label>
+        <input class="n-warn" inputmode="numeric" value="80"></div>
+    </div>
+    <button class="big-btn n-save">${t('list.create')}</button>`;
+
+  neu.querySelector('.n-save').onclick = async () => {
+    const name = neu.querySelector('.n-name').value.trim();
+    const max  = parseInt(neu.querySelector('.n-max').value, 10);
+    const warn = parseInt(neu.querySelector('.n-warn').value, 10) || 80;
+    if (!name || !max || max < 1 || warn < 1 || warn > 100) return;
+    const { error } = await sb.from('areas')
+      .insert({ name, max_guests: max, warn_percent: warn });
+    if (error) { alert(t('list.createFailed', { msg: error.message })); return; }
+    adminLaden();
+  };
+  box.appendChild(neu);
 }
 
 /* ================================================================
