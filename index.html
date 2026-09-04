@@ -227,6 +227,9 @@ let serverStand = 0;     // letzter von der Datenbank bestätigter Stand
 let ausstehend = [];     // Klicks, die noch nicht gespeichert werden konnten
 let sendetGerade = false;
 let netzOk = true;
+let stockt = false;      // letzter Sendeversuch ist fehlgeschlagen
+let bannerTimer = null;
+const GEDULD = 2500;     // ms, bevor ein liegengebliebener Klick gemeldet wird
 let kanal = null;
 let abgleichTimer = null;
 let bearbeiten = false;
@@ -258,8 +261,24 @@ function verbindung(ok) { netzOk = ok; banner(); }
 function banner() {
   const el = $('offline');
   if (!el) return;
+  clearTimeout(bannerTimer);
+  bannerTimer = null;
+
   const n = ausstehend.length;
-  if (netzOk && n === 0) { el.classList.remove('show'); return; }
+  if (n === 0) stockt = false;
+
+  // Ein frisch abgeschickter Klick ist kein Problem – erst wenn der
+  // Versuch fehlschlägt oder ungewöhnlich lange dauert, wird gemeldet.
+  const wartetSeit = n > 0 ? Date.now() - (ausstehend[0].t || 0) : 0;
+  const haengt = n > 0 && (stockt || wartetSeit > GEDULD);
+
+  if (netzOk && !haengt) {
+    el.classList.remove('show');
+    // Läuft noch etwas, später nochmal nachsehen
+    if (n > 0) bannerTimer = setTimeout(banner, Math.max(200, GEDULD - wartetSeit));
+    return;
+  }
+
   if (n > 0) {
     el.style.background = '#E9AC3C';
     el.style.color = '#241A05';
@@ -474,13 +493,14 @@ async function senden() {
         p_entrance: eingang(),
         p_client_event_id: e.id,
       });
-      if (error) { verbindung(false); break; }
+      if (error) { stockt = true; verbindung(false); break; }
       const i = ausstehend.findIndex(x => x.id === e.id);
       if (i !== -1) { ausstehend.splice(i, 1); outboxSpeichern(); }
       if (typeof data === 'number') serverStand = data;
+      stockt = false;
       zeichne();
     }
-    if (ausstehend.length === 0) verbindung(true);
+    if (ausstehend.length === 0) { stockt = false; verbindung(true); }
   } finally {
     sendetGerade = false;
   }
