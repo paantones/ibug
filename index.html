@@ -75,7 +75,13 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 /* Raum */
 .bar-top{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 0;gap:12px}
 .bar-top button{font-size:.9rem;font-weight:500;opacity:.75}
-.bar-top .title{font-weight:700}
+.bar-top .title{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-top button{flex:0 0 auto}
+/* Verlassen-Knopf: als Fläche gesetzt, damit er nicht wie ein Zurück-Link
+   wirkt. Weiß mit rotem Text, weil ein roter Knopf auf dem roten
+   Voll-Hintergrund verschwinden würde. */
+.leave{background:#FFFFFF;color:#D50000;border:1px solid #D50000;border-radius:99px;
+  padding:7px 14px;font-size:.82rem;font-weight:700;opacity:1 !important}
 .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 24px;text-align:center}
 .count{font-size:min(38vw,11rem);font-weight:900;line-height:1;letter-spacing:-.045em;transition:transform .15s}
 .count.pulse{transform:scale(1.045)}
@@ -222,7 +228,7 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 <!-- ============ Raum ============ -->
 <section id="room" class="screen">
   <div class="bar-top">
-    <button id="room-back"><span class="chev">‹</span> <span data-i18n="room.back"></span></button>
+    <button id="room-back" class="leave" data-i18n="room.leave"></button>
     <span class="title" id="room-title"></span>
     <button id="room-stats" data-i18n="room.stats"></button>
   </div>
@@ -741,7 +747,7 @@ async function raumOeffnen(b) {
   bereich = b;
   serverStand = b.current_count;
   ausstehend = outboxLaden(b.id);
-  $('room-title').textContent = eingang ? `${b.name} \u00b7 ${eingang.name}` : b.name;
+  $('room-title').textContent = b.name;
   $('room-of').textContent = t('room.of', { max: b.max_guests });
   $('reset-confirm').classList.add('hidden');
   $('reset-ask').classList.remove('hidden');

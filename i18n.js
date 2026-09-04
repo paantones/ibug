@@ -55,7 +55,7 @@ en: {
   'list.createFailed': 'The area could not be created: {msg}',
   'list.sharedNote': 'All devices share the same count. Open the page at every entrance and pick the same area.',
 
-  'room.back': 'Areas',
+  'room.leave': 'Leave entrance',
   'room.stats': 'Statistics',
   'room.of': 'of {max}',
   'room.full': 'Full — do not let anyone else in',
@@ -160,7 +160,7 @@ de: {
   'list.createFailed': 'Bereich konnte nicht angelegt werden: {msg}',
   'list.sharedNote': 'Alle Geräte teilen sich denselben Stand. Öffne die Seite an jedem Eingang und wähle denselben Bereich.',
 
-  'room.back': 'Bereiche',
+  'room.leave': 'Eingang verlassen',
   'room.stats': 'Statistik',
   'room.of': 'von {max}',
   'room.full': 'Voll – niemanden mehr reinlassen',
@@ -265,7 +265,7 @@ tr: {
   'list.createFailed': 'Alan oluşturulamadı: {msg}',
   'list.sharedNote': 'Tüm cihazlar aynı sayımı paylaşır. Sayfayı her girişte açın ve aynı alanı seçin.',
 
-  'room.back': 'Alanlar',
+  'room.leave': 'Girişten ayrıl',
   'room.stats': 'İstatistik',
   'room.of': 'azami {max}',
   'room.full': 'Dolu – kimseyi içeri almayın',
@@ -370,7 +370,7 @@ ru: {
   'list.createFailed': 'Не удалось создать зону: {msg}',
   'list.sharedNote': 'Все устройства ведут общий подсчёт. Откройте страницу на каждом входе и выберите одну и ту же зону.',
 
-  'room.back': 'Зоны',
+  'room.leave': 'Покинуть вход',
   'room.stats': 'Статистика',
   'room.of': 'из {max}',
   'room.full': 'Заполнено – больше никого не впускать',
@@ -483,7 +483,7 @@ uk: {
   'list.createFailed': 'Не вдалося створити зону: {msg}',
   'list.sharedNote': 'Усі пристрої ведуть спільний підрахунок. Відкрийте сторінку на кожному вході та виберіть ту саму зону.',
 
-  'room.back': 'Зони',
+  'room.leave': 'Покинути вхід',
   'room.stats': 'Статистика',
   'room.of': 'з {max}',
   'room.full': 'Заповнено – більше нікого не впускати',
@@ -596,7 +596,7 @@ pl: {
   'list.createFailed': 'Nie udało się utworzyć strefy: {msg}',
   'list.sharedNote': 'Wszystkie urządzenia mają wspólny licznik. Otwórz stronę przy każdym wejściu i wybierz tę samą strefę.',
 
-  'room.back': 'Strefy',
+  'room.leave': 'Opuść wejście',
   'room.stats': 'Statystyki',
   'room.of': 'z {max}',
   'room.full': 'Pełno – nie wpuszczaj nikogo więcej',
@@ -709,7 +709,7 @@ es: {
   'list.createFailed': 'No se ha podido crear la zona: {msg}',
   'list.sharedNote': 'Todos los dispositivos comparten el mismo recuento. Abre la página en cada entrada y elige la misma zona.',
 
-  'room.back': 'Zonas',
+  'room.leave': 'Dejar la entrada',
   'room.stats': 'Estadísticas',
   'room.of': 'de {max}',
   'room.full': 'Lleno – no dejes entrar a nadie más',
@@ -817,7 +817,7 @@ nl: {
   'list.createFailed': 'De zone kon niet worden aangemaakt: {msg}',
   'list.sharedNote': 'Alle apparaten delen dezelfde telling. Open de pagina bij elke ingang en kies dezelfde zone.',
 
-  'room.back': 'Zones',
+  'room.leave': 'Ingang verlaten',
   'room.stats': 'Statistieken',
   'room.of': 'van {max}',
   'room.full': 'Vol – niemand meer binnenlaten',
@@ -925,7 +925,7 @@ ar: {
   'list.createFailed': 'تعذّر إنشاء المنطقة: {msg}',
   'list.sharedNote': 'تشترك جميع الأجهزة في العدد نفسه. افتح الصفحة عند كل مدخل واختر المنطقة نفسها.',
 
-  'room.back': 'المناطق',
+  'room.leave': 'مغادرة المدخل',
   'room.stats': 'الإحصاءات',
   'room.of': 'من {max}',
   'room.full': 'ممتلئ – لا تسمح بدخول أحد',
@@ -1039,7 +1039,7 @@ it: {
   'list.createFailed': 'Impossibile creare l’area: {msg}',
   'list.sharedNote': 'Tutti i dispositivi condividono lo stesso conteggio. Apri la pagina a ogni ingresso e scegli la stessa area.',
 
-  'room.back': 'Aree',
+  'room.leave': 'Lascia l’ingresso',
   'room.stats': 'Statistiche',
   'room.of': 'su {max}',
   'room.full': 'Pieno – non far entrare più nessuno',
@@ -1147,7 +1147,7 @@ fr: {
   'list.createFailed': 'Impossible de créer la zone : {msg}',
   'list.sharedNote': 'Tous les appareils partagent le même compteur. Ouvrez la page à chaque entrée et choisissez la même zone.',
 
-  'room.back': 'Zones',
+  'room.leave': 'Quitter l’entrée',
   'room.stats': 'Statistiques',
   'room.of': 'sur {max}',
   'room.full': 'Complet – ne laissez plus entrer personne',
