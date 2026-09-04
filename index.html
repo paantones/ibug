@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#151D26">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>inug – Besucher*innenzähler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#151D26; --panel:#1E2A35; --line:#31404E;
+  --text:#F1EFE9; --dim:#93A4B2;
+  --bg:#151D26; --accent:#45C795;
+}
+body.state-ok   { --bg:#10382A; --accent:#45C795; }
+body.state-warn { --bg:#3D2E0D; --accent:#E9AC3C; }
+body.state-full { --bg:#45161A; --accent:#F4675A; }
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:'Archivo','Helvetica Neue',system-ui,sans-serif;
+  transition:background-color .3s ease;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overscroll-behavior:none;
+}
+button,input{font:inherit;color:inherit}
+button{background:none;border:none;cursor:pointer}
+input{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;width:100%;outline:none}
+input:focus-visible,button:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.tabular{font-variant-numeric:tabular-nums}
+.screen{display:none;min-height:100dvh;flex-direction:column}
+.screen.on{display:flex}
+.wrap{width:100%;max-width:34rem;margin:0 auto;padding:24px 20px 40px}
+.dim{color:var(--dim)}
+.hidden{display:none !important}
+
+/* Sperre */
+#lock .wrap{margin-top:auto;margin-bottom:auto}
+.eyebrow{font-size:.85rem;color:var(--dim);margin-bottom:6px}
+h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
+.big-btn{width:100%;background:var(--text);color:var(--ink);border-radius:10px;padding:16px;font-weight:700;font-size:1.05rem;margin-top:14px}
+.ghost-btn{width:100%;border:1px solid var(--line);border-radius:10px;padding:16px;font-weight:700;margin-top:14px}
+.err{color:#F4675A;font-size:.9rem;margin-top:10px}
+
+/* Liste */
+.head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;width:100%;text-align:left;display:block}
+.row{display:flex;gap:10px;align-items:stretch;margin-bottom:12px}
+.row .card{flex:1}
+.card-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.card-name{font-size:1.2rem;font-weight:700}
+.card-count{font-size:1.2rem;font-weight:900}
+.bar{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:14px}
+.bar>i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .2s}
+.del{border:1px solid #F4675A;color:#F4675A;border-radius:10px;padding:0 16px;font-size:.9rem;font-weight:700}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:24px}
+.empty b{display:block;margin-bottom:4px}
+.form{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:20px}
+.form input{background:var(--ink);margin-bottom:12px}
+.form-actions{display:flex;gap:10px}
+.form-actions .big-btn{margin-top:0;flex:1}
+.form-actions .cancel{border:1px solid var(--line);border-radius:10px;padding:0 20px;color:var(--dim)}
+.note{font-size:.78rem;line-height:1.5;color:var(--dim);margin-top:28px}
+
+/* Raum */
+.bar-top{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 0;gap:12px}
+.bar-top button{font-size:.9rem;font-weight:500;opacity:.75}
+.bar-top .title{font-weight:700}
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 24px;text-align:center}
+.count{font-size:min(38vw,11rem);font-weight:900;line-height:1;letter-spacing:-.045em;transition:transform .15s}
+.count.pulse{transform:scale(1.045)}
+.of{font-size:1.1rem;font-weight:500;opacity:.7;margin-top:4px}
+.gauge{height:8px;width:100%;max-width:24rem;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:30px}
+.gauge>i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .2s}
+.status{margin-top:16px;font-size:1.15rem;font-weight:700;color:var(--accent)}
+.subtle{margin-top:22px;font-size:.85rem;opacity:.55}
+.confirm{margin-top:22px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;font-size:.9rem}
+.confirm .yes{background:var(--text);color:var(--bg);border-radius:8px;padding:8px 14px;font-weight:700}
+.pads{display:flex;gap:12px;padding:0 16px 24px;height:32vh;min-height:150px}
+.pad{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:18px;transition:transform .12s}
+.pad:active{transform:scale(.96)}
+.pad .sign{font-size:3.6rem;font-weight:900;line-height:1}
+.pad .lbl{margin-top:8px;font-size:1rem;font-weight:700}
+.pad.minus{border:2px solid rgba(255,255,255,.4)}
+.pad.minus[disabled]{border-color:rgba(255,255,255,.12);opacity:.35}
+.pad.plus{background:var(--text);color:var(--bg)}
+
+/* Statistik */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.kpi .n{font-size:1.85rem;font-weight:900;line-height:1}
+.kpi .l{margin-top:8px;font-size:.85rem;color:var(--dim)}
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 16px 14px}
+.chart-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+.chart svg{width:100%;height:auto;display:block}
+.offline{background:#45161A;color:#F1EFE9;text-align:center;padding:8px;font-size:.85rem;font-weight:700}
+</style>
+</head>
+<body>
+
+<div id="offline" class="offline hidden">Keine Verbindung – Zählungen werden nicht gespeichert</div>
+
+<!-- ============ Passwort ============ -->
+<section id="lock" class="screen on">
+  <div class="wrap">
+    <div class="eyebrow">inug</div>
+    <h1>Besucher&shy;innen&shy;zähler</h1>
+    <div style="height:28px"></div>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password">
+    <p id="pw-err" class="err hidden">Passwort stimmt nicht. Nochmal probieren.</p>
+    <button id="pw-go" class="big-btn">Entsperren</button>
+  </div>
+</section>
+
+<!-- ============ Bereiche ============ -->
+<section id="list" class="screen">
+  <div class="wrap">
+    <div class="head">
+      <h1>Bereiche</h1>
+      <button id="edit-toggle" class="dim hidden" style="font-size:.9rem">Bearbeiten</button>
+    </div>
+    <div id="areas"></div>
+    <div id="area-empty" class="empty hidden">
+      <b>Noch kein Bereich angelegt.</b>
+      <span class="dim" style="font-size:.9rem">Leg einen Bereich mit Namen und maximaler Gästezahl an. Alle Eingänge, die diese Seite öffnen, zählen dann auf denselben Stand.</span>
+    </div>
+
+    <div id="new-form" class="form hidden">
+      <input id="new-name" placeholder="Name des Bereichs">
+      <input id="new-max" inputmode="numeric" placeholder="Maximale Gästezahl">
+      <div class="form-actions">
+        <button id="new-save" class="big-btn">Bereich anlegen</button>
+        <button id="new-cancel" class="cancel">Abbrechen</button>
+      </div>
+    </div>
+    <button id="new-open" class="ghost-btn">+ Neuen Bereich anlegen</button>
+
+    <p class="note">
+      Dieses Gerät zählt als <b id="entrance-name">Eingang</b>.
+      <button id="entrance-edit" style="text-decoration:underline">ändern</button><br><br>
+      Alle Geräte teilen sich denselben Stand. Öffne die Seite an jedem Eingang und wähle denselben Bereich.
+    </p>
+  </div>
+</section>
+
+<!-- ============ Raum ============ -->
+<section id="room" class="screen">
+  <div class="bar-top">
+    <button id="room-back">‹ Bereiche</button>
+    <span class="title" id="room-title"></span>
+    <button id="room-stats">Statistik</button>
+  </div>
+  <div class="stage">
+    <div id="count" class="count tabular">–</div>
+    <div class="of">von <span id="room-max"></span></div>
+    <div class="gauge"><i id="gauge"></i></div>
+    <div id="status" class="status"></div>
+    <button id="reset-ask" class="subtle">Zurücksetzen</button>
+    <div id="reset-confirm" class="confirm hidden">
+      <span style="opacity:.8">Zähler auf 0 setzen?</span>
+      <button id="reset-yes" class="yes">Ja, zurücksetzen</button>
+      <button id="reset-no" style="opacity:.7">Abbrechen</button>
+    </div>
+  </div>
+  <div class="pads">
+    <button id="minus" class="pad minus"><span class="sign">−</span><span class="lbl">raus</span></button>
+    <button id="plus" class="pad plus"><span class="sign">+</span><span class="lbl">rein</span></button>
+  </div>
+</section>
+
+<!-- ============ Statistik ============ -->
+<section id="stats" class="screen">
+  <div class="wrap">
+    <div class="head" style="align-items:center">
+      <button id="stats-back" class="dim" style="font-size:.9rem">‹ Zurück</button>
+      <span style="font-weight:700" id="stats-title"></span>
+      <span style="width:3.5rem"></span>
+    </div>
+    <h1 style="margin-bottom:16px">Statistik</h1>
+    <input id="stats-day" type="date" style="margin-bottom:24px">
+    <div id="stats-body"></div>
+  </div>
+</section>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+/* ================================================================
+   EINSTELLUNGEN – hier die eigenen Werte eintragen.
+   Supabase → Project Settings → API
+   ================================================================ */
+const SUPABASE_URL      = 'https://DEIN-PROJEKT.supabase.co';
+const SUPABASE_ANON_KEY = 'DEIN-ANON-KEY';
+const PASSWORT          = 'ibugiscounting';
+const ZEITZONE          = 'Europe/Berlin';
+/* ============================================================== */
+
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = (id) => document.getElementById(id);
+const zwei = (n) => String(n).padStart(2, '0');
+const tagVon = (d = new Date()) => `${d.getFullYear()}-${zwei(d.getMonth()+1)}-${zwei(d.getDate())}`;
+const uhr = (ts) => { const d = new Date(ts); return `${zwei(d.getHours())}:${zwei(d.getMinutes())}`; };
+
+let bereich = null;      // aktuell geöffneter Bereich
+let stand = 0;
+let offenePlus = 0;      // eigene Klicks, die noch nicht bestätigt sind
+let kanal = null;
+let bearbeiten = false;
+let wakeLock = null;
+
+/* ---------- Gerätename (Eingang) ---------- */
+function eingang() {
+  let n = localStorage.getItem('inug:entrance');
+  if (!n) { n = 'Eingang'; localStorage.setItem('inug:entrance', n); }
+  return n;
+}
+function eingangSetzen() {
+  const n = prompt('Wie heißt dieser Eingang?', eingang());
+  if (n && n.trim()) {
+    localStorage.setItem('inug:entrance', n.trim());
+    $('entrance-name').textContent = n.trim();
+  }
+}
+
+/* ---------- Bildschirmwechsel ---------- */
+function zeige(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+  if (id !== 'room') document.body.className = '';
+  window.scrollTo(0, 0);
+}
+
+function verbindung(ok) { $('offline').classList.toggle('hidden', ok); }
+
+/* ================================================================
+   Passwort
+   ================================================================ */
+function entsperrt() {
+  zeige('list');
+  $('entrance-name').textContent = eingang();
+  bereicheLaden();
+}
+$('pw-go').onclick = () => {
+  if ($('pw').value.trim() === PASSWORT) {
+    localStorage.setItem('inug:unlocked', '1');
+    entsperrt();
+  } else {
+    $('pw-err').classList.remove('hidden');
+    $('pw').value = '';
+  }
+};
+$('pw').onkeydown = (e) => { if (e.key === 'Enter') $('pw-go').click(); };
+$('pw').oninput = () => $('pw-err').classList.add('hidden');
+$('entrance-edit').onclick = eingangSetzen;
+
+/* ================================================================
+   Bereichsliste
+   ================================================================ */
+function zustand(c, max) {
+  if (!max) return 'ok';
+  const q = c / max;
+  return q >= 1 ? 'full' : q >= 0.8 ? 'warn' : 'ok';
+}
+const AKZENT = { ok:'#45C795', warn:'#E9AC3C', full:'#F4675A' };
+
+async function bereicheLaden() {
+  const { data, error } = await sb.from('area_status').select('*').order('name');
+  verbindung(!error);
+  if (error) return;
+
+  const box = $('areas');
+  box.innerHTML = '';
+  $('area-empty').classList.toggle('hidden', data.length > 0);
+  $('edit-toggle').classList.toggle('hidden', data.length === 0);
+
+  data.forEach(b => {
+    const z = zustand(b.current_count, b.max_guests);
+    const pct = Math.min(100, b.max_guests ? (b.current_count / b.max_guests) * 100 : 0);
+
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    const card = document.createElement('button');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="card-name"></span>
+        <span class="card-count tabular" style="color:${AKZENT[z]}">
+          ${b.current_count}<span class="dim" style="font-size:.85rem;font-weight:500"> / ${b.max_guests}</span>
+        </span>
+      </div>
+      <div class="bar"><i style="width:${pct}%;background:${AKZENT[z]}"></i></div>`;
+    card.querySelector('.card-name').textContent = b.name;
+    card.onclick = () => raumOeffnen(b);
+    row.appendChild(card);
+
+    if (bearbeiten) {
+      const del = document.createElement('button');
+      del.className = 'del';
+      del.textContent = 'Löschen';
+      del.onclick = async () => {
+        if (!confirm(`„${b.name}" mit allen Zähldaten löschen?`)) return;
+        await sb.from('areas').delete().eq('id', b.id);
+        bereicheLaden();
+      };
+      row.appendChild(del);
+    }
+    box.appendChild(row);
+  });
+}
+
+$('edit-toggle').onclick = () => {
+  bearbeiten = !bearbeiten;
+  $('edit-toggle').textContent = bearbeiten ? 'Fertig' : 'Bearbeiten';
+  bereicheLaden();
+};
+$('new-open').onclick = () => {
+  $('new-form').classList.remove('hidden');
+  $('new-open').classList.add('hidden');
+  $('new-name').focus();
+};
+$('new-cancel').onclick = () => {
+  $('new-form').classList.add('hidden');
+  $('new-open').classList.remove('hidden');
+};
+$('new-max').oninput = (e) => { e.target.value = e.target.value.replace(/\D/g, ''); };
+$('new-max').onkeydown = (e) => { if (e.key === 'Enter') $('new-save').click(); };
+$('new-save').onclick = async () => {
+  const name = $('new-name').value.trim();
+  const max = parseInt($('new-max').value, 10);
+  if (!name || !max || max < 1) return;
+  const { error } = await sb.from('areas').insert({ name, max_guests: max });
+  if (error) { alert('Bereich konnte nicht angelegt werden: ' + error.message); return; }
+  $('new-name').value = ''; $('new-max').value = '';
+  $('new-cancel').click();
+  bereicheLaden();
+};
+
+/* ================================================================
+   Raum
+   ================================================================ */
+async function raumOeffnen(b) {
+  bereich = b;
+  stand = b.current_count;
+  offenePlus = 0;
+  $('room-title').textContent = b.name;
+  $('room-max').textContent = b.max_guests;
+  $('reset-confirm').classList.add('hidden');
+  $('reset-ask').classList.remove('hidden');
+  zeige('room');
+  zeichne();
+  bildschirmWach();
+
+  if (kanal) await sb.removeChannel(kanal);
+  kanal = sb.channel(`area:${b.id}`)
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'count_events', filter: `area_id=eq.${b.id}` },
+      (p) => { if (offenePlus === 0) { stand = p.new.resulting_count; zeichne(); } })
+    .subscribe();
+}
+
+function zeichne(puls) {
+  const z = zustand(stand, bereich.max_guests);
+  document.body.className = 'state-' + z;
+  const el = $('count');
+  el.textContent = stand;
+  if (puls) { el.classList.add('pulse'); setTimeout(() => el.classList.remove('pulse'), 160); }
+  $('gauge').style.width = Math.min(100, (stand / bereich.max_guests) * 100) + '%';
+  const frei = Math.max(0, bereich.max_guests - stand);
+  $('status').textContent = stand >= bereich.max_guests
+    ? 'Voll – niemanden mehr reinlassen'
+    : `Noch ${frei} ${frei === 1 ? 'Platz' : 'Plätze'} frei`;
+  $('minus').disabled = stand === 0;
+}
+
+async function zaehlen(delta) {
+  if (delta < 0 && stand === 0) return;
+  stand = Math.max(0, stand + delta);
+  zeichne(true);
+  if (navigator.vibrate) navigator.vibrate(12);
+
+  offenePlus++;
+  const { data, error } = await sb.rpc('adjust_count', {
+    p_area_id: bereich.id, p_delta: delta, p_entrance: eingang()
+  });
+  offenePlus--;
+  verbindung(!error);
+  if (!error && offenePlus === 0) { stand = data; zeichne(); }
+}
+
+$('plus').onclick  = () => zaehlen(1);
+$('minus').onclick = () => zaehlen(-1);
+
+$('reset-ask').onclick = () => {
+  $('reset-ask').classList.add('hidden');
+  $('reset-confirm').classList.remove('hidden');
+};
+$('reset-no').onclick = () => {
+  $('reset-confirm').classList.add('hidden');
+  $('reset-ask').classList.remove('hidden');
+};
+$('reset-yes').onclick = async () => {
+  $('reset-no').click();
+  stand = 0; zeichne();
+  offenePlus++;
+  const { error } = await sb.rpc('reset_count', { p_area_id: bereich.id, p_entrance: eingang() });
+  offenePlus--;
+  verbindung(!error);
+};
+
+$('room-back').onclick = async () => {
+  if (kanal) { await sb.removeChannel(kanal); kanal = null; }
+  bildschirmFrei();
+  zeige('list');
+  bereicheLaden();
+};
+
+/* Bildschirm anlassen, solange gezählt wird */
+async function bildschirmWach() {
+  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch {}
+}
+function bildschirmFrei() { if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; } }
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && $('room').classList.contains('on')) bildschirmWach();
+});
+
+/* ================================================================
+   Statistik
+   ================================================================ */
+$('room-stats').onclick = () => {
+  $('stats-title').textContent = bereich.name;
+  $('stats-day').value = tagVon();
+  $('stats-day').max = tagVon();
+  zeige('stats');
+  statistikLaden();
+};
+$('stats-back').onclick = () => { zeige('room'); zeichne(); };
+$('stats-day').onchange = statistikLaden;
+
+async function statistikLaden() {
+  const tag = $('stats-day').value;
+  if (!tag) return;
+  const body = $('stats-body');
+  body.innerHTML = '<p class="dim">lädt …</p>';
+
+  const [{ data: s, error: e1 }, { data: h, error: e2 }] = await Promise.all([
+    sb.rpc('day_stats',   { p_area_id: bereich.id, p_day: tag, p_tz: ZEITZONE }),
+    sb.rpc('day_history', { p_area_id: bereich.id, p_day: tag, p_tz: ZEITZONE }),
+  ]);
+
+  if (e1 || e2) { body.innerHTML = '<p class="dim">Daten konnten nicht geladen werden.</p>'; return; }
+  const k = Array.isArray(s) ? s[0] : s;
+  if (!k || !k.first_at || !h || h.length === 0) {
+    body.innerHTML = `<div class="empty"><b>Für diesen Tag gibt es keine Daten.</b>
+      <span class="dim" style="font-size:.9rem">Sobald im Bereich gezählt wird, erscheint hier der Verlauf.</span></div>`;
+    return;
+  }
+
+  const schnitt = Number(k.avg_occupancy).toFixed(1).replace('.', ',');
+  const peakRot = k.peak >= bereich.max_guests;
+
+  body.innerHTML = `
+    <div class="grid">
+      <div class="kpi"><div class="n tabular" style="color:#45C795">${k.total_in}</div><div class="l">insgesamt reingegangen</div></div>
+      <div class="kpi"><div class="n tabular" style="color:#E9AC3C">${k.total_out}</div><div class="l">insgesamt rausgegangen</div></div>
+      <div class="kpi"><div class="n tabular">${schnitt}</div><div class="l">durchschnittlich im Raum</div></div>
+      <div class="kpi"><div class="n tabular" style="${peakRot ? 'color:#F4675A' : ''}">${k.peak}</div><div class="l">Höchststand, ${uhr(k.peak_at)} Uhr</div></div>
+    </div>
+    <div class="chart">
+      <div class="chart-head">
+        <span style="font-weight:700">Verlauf</span>
+        <span class="dim" style="font-size:.85rem">${uhr(k.first_at)} – ${uhr(k.last_at)} Uhr</span>
+      </div>
+      ${verlaufSvg(h, tag)}
+      <p class="dim" style="font-size:.75rem;margin-top:12px;line-height:1.5">
+        Maximale Gästezahl: ${bereich.max_guests}. Der Durchschnitt ist über die Zeit
+        gewichtet, gerechnet ab der ersten Zählung des Tages.
+      </p>
+    </div>`;
+}
+
+function verlaufSvg(rows, tag) {
+  const W = 620, H = 220, L = 38, R = 10, T = 10, B = 26;
+  const punkte = rows.map(r => ({ t: new Date(r.at).getTime(), c: r.occupancy }));
+  // Startpunkt und aktueller Rand ergänzen, damit die Treppe sauber beginnt und endet
+  const ende = tag === tagVon() ? Date.now() : punkte[punkte.length - 1].t;
+  punkte.push({ t: Math.max(ende, punkte[punkte.length - 1].t), c: punkte[punkte.length - 1].c });
+
+  const t0 = punkte[0].t, t1 = punkte[punkte.length - 1].t;
+  const span = Math.max(1, t1 - t0);
+  const yMax = Math.max(bereich.max_guests, ...punkte.map(p => p.c), 1);
+  const x = (t) => L + ((t - t0) / span) * (W - L - R);
+  const y = (c) => T + (1 - c / yMax) * (H - T - B);
+
+  let d = `M ${x(punkte[0].t)} ${y(punkte[0].c)}`;
+  for (let i = 1; i < punkte.length; i++) {
+    d += ` L ${x(punkte[i].t)} ${y(punkte[i - 1].c)} L ${x(punkte[i].t)} ${y(punkte[i].c)}`;
+  }
+
+  // Gitter + Y-Beschriftung
+  let gitter = '';
+  const stufen = 4;
+  for (let i = 0; i <= stufen; i++) {
+    const v = Math.round((yMax / stufen) * i);
+    const yy = y(v);
+    gitter += `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="#31404E" stroke-width="1"/>
+               <text x="${L - 8}" y="${yy + 4}" fill="#93A4B2" font-size="11" text-anchor="end">${v}</text>`;
+  }
+  // Kapazitätslinie
+  const yk = y(bereich.max_guests);
+  gitter += `<line x1="${L}" y1="${yk}" x2="${W - R}" y2="${yk}" stroke="#F4675A" stroke-width="1" stroke-dasharray="4 4" opacity=".7"/>`;
+
+  // X-Beschriftung
+  let achse = '';
+  for (let i = 0; i <= 3; i++) {
+    const t = t0 + (span / 3) * i;
+    achse += `<text x="${x(t)}" y="${H - 6}" fill="#93A4B2" font-size="11"
+              text-anchor="${i === 0 ? 'start' : i === 3 ? 'end' : 'middle'}">${uhr(t)}</text>`;
+  }
+
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+            aria-label="Belegungsverlauf über den Tag">
+      ${gitter}${achse}
+      <path d="${d}" fill="none" stroke="#45C795" stroke-width="2.5"
+            stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    </svg>`;
+}
+
+/* ================================================================
+   Start
+   ================================================================ */
+if (localStorage.getItem('inug:unlocked') === '1') entsperrt();
+else $('pw').focus();
+
+window.addEventListener('online',  () => verbindung(true));
+window.addEventListener('offline', () => verbindung(false));
+</script>
+</body>
+</html>
