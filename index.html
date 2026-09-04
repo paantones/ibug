@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>inug – Besucher*innenzähler</title>
+<title>inug</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -54,7 +54,7 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 
 /* Liste */
 .head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;width:100%;text-align:left;display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;width:100%;text-align:start;display:block}
 .row{display:flex;gap:10px;align-items:stretch;margin-bottom:12px}
 .row .card{flex:1}
 .card-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
@@ -114,6 +114,13 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
   pointer-events:none;
 }
 #offline.show{opacity:1;transform:none}
+
+/* Sprachauswahl */
+.langrow{display:flex;align-items:center;gap:10px;margin-top:22px;font-size:.85rem;color:var(--dim)}
+.lang{flex:1;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:inherit;font-size:.9rem}
+
+/* Bei Rechts-nach-links-Sprachen zeigt der Zurück-Pfeil in die andere Richtung */
+[dir="rtl"] .chev{display:inline-block;transform:scaleX(-1)}
 </style>
 </head>
 <body>
@@ -122,11 +129,15 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 <section id="lock" class="screen on">
   <div class="wrap">
     <div class="eyebrow">inug</div>
-    <h1>Besucher&shy;innen&shy;zähler</h1>
+    <h1 data-i18n="lock.heading"></h1>
     <div style="height:28px"></div>
-    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password">
-    <p id="pw-err" class="err hidden">Passwort stimmt nicht. Nochmal probieren.</p>
-    <button id="pw-go" class="big-btn">Entsperren</button>
+    <input id="pw" type="password" data-i18n-ph="lock.password" autocomplete="current-password">
+    <p id="pw-err" class="err hidden" data-i18n="lock.wrong"></p>
+    <button id="pw-go" class="big-btn" data-i18n="lock.unlock"></button>
+    <div class="langrow">
+      <label for="lang-lock" data-i18n="lock.language"></label>
+      <select id="lang-lock" class="lang"></select>
+    </div>
   </div>
 </section>
 
@@ -134,33 +145,38 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 <section id="list" class="screen">
   <div class="wrap">
     <div class="head">
-      <h1>Bereiche</h1>
-      <button id="edit-toggle" class="dim hidden" style="font-size:.9rem">Bearbeiten</button>
+      <h1 data-i18n="list.heading"></h1>
+      <button id="edit-toggle" class="dim hidden" style="font-size:.9rem"></button>
     </div>
     <div id="areas"></div>
     <div id="list-error" class="empty hidden" style="border-color:#FF1744">
-      <b style="color:#FF1744">Keine Verbindung zur Datenbank.</b>
-      <span class="dim" style="font-size:.9rem">Prüfe die Internetverbindung. Die Liste lädt sich automatisch, sobald die Verbindung wieder steht.</span>
+      <b style="color:#FF1744" data-i18n="list.errorTitle"></b>
+      <span class="dim" style="font-size:.9rem" data-i18n="list.errorText"></span>
     </div>
     <div id="area-empty" class="empty hidden">
-      <b>Noch kein Bereich angelegt.</b>
-      <span class="dim" style="font-size:.9rem">Leg einen Bereich mit Namen und maximaler Gästezahl an. Alle Eingänge, die diese Seite öffnen, zählen dann auf denselben Stand.</span>
+      <b data-i18n="list.emptyTitle"></b>
+      <span class="dim" style="font-size:.9rem" data-i18n="list.emptyText"></span>
     </div>
 
     <div id="new-form" class="form hidden">
-      <input id="new-name" placeholder="Name des Bereichs">
-      <input id="new-max" inputmode="numeric" placeholder="Maximale Gästezahl">
+      <input id="new-name" data-i18n-ph="list.name">
+      <input id="new-max" inputmode="numeric" data-i18n-ph="list.max">
       <div class="form-actions">
-        <button id="new-save" class="big-btn">Bereich anlegen</button>
-        <button id="new-cancel" class="cancel">Abbrechen</button>
+        <button id="new-save" class="big-btn" data-i18n="list.create"></button>
+        <button id="new-cancel" class="cancel" data-i18n="list.cancel"></button>
       </div>
     </div>
-    <button id="new-open" class="ghost-btn">+ Neuen Bereich anlegen</button>
+    <button id="new-open" class="ghost-btn" data-i18n="list.newArea"></button>
+
+    <div class="langrow" style="margin-top:28px">
+      <label for="lang-list" data-i18n="lock.language"></label>
+      <select id="lang-list" class="lang"></select>
+    </div>
 
     <p class="note">
-      Dieses Gerät zählt als <b id="entrance-name">Eingang</b>.
-      <button id="entrance-edit" style="text-decoration:underline">ändern</button><br><br>
-      Alle Geräte teilen sich denselben Stand. Öffne die Seite an jedem Eingang und wähle denselben Bereich.
+      <span data-i18n="list.deviceBefore"></span> <b id="entrance-name"></b>
+      <button id="entrance-edit" style="text-decoration:underline" data-i18n="list.change"></button><br><br>
+      <span data-i18n="list.sharedNote"></span>
     </p>
   </div>
 </section>
@@ -168,26 +184,26 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 <!-- ============ Raum ============ -->
 <section id="room" class="screen">
   <div class="bar-top">
-    <button id="room-back">‹ Bereiche</button>
+    <button id="room-back"><span class="chev">‹</span> <span data-i18n="room.back"></span></button>
     <span class="title" id="room-title"></span>
-    <button id="room-stats">Statistik</button>
+    <button id="room-stats" data-i18n="room.stats"></button>
   </div>
   <div class="statusbar"><span id="offline"></span></div>
   <div class="stage">
     <div id="count" class="count tabular">–</div>
-    <div class="of">von <span id="room-max"></span></div>
+    <div class="of" id="room-of"></div>
     <div class="gauge"><i id="gauge"></i></div>
     <div id="status" class="status"></div>
-    <button id="reset-ask" class="subtle">Zurücksetzen</button>
+    <button id="reset-ask" class="subtle" data-i18n="room.reset"></button>
     <div id="reset-confirm" class="confirm hidden">
-      <span style="opacity:.8">Zähler auf 0 setzen?</span>
-      <button id="reset-yes" class="yes">Ja, zurücksetzen</button>
-      <button id="reset-no" style="opacity:.7">Abbrechen</button>
+      <span style="opacity:.8" data-i18n="room.resetAsk"></span>
+      <button id="reset-yes" class="yes" data-i18n="room.resetYes"></button>
+      <button id="reset-no" style="opacity:.7" data-i18n="room.resetNo"></button>
     </div>
   </div>
   <div class="pads">
-    <button id="minus" class="pad minus"><span class="sign">−</span><span class="lbl">raus</span></button>
-    <button id="plus" class="pad plus"><span class="sign">+</span><span class="lbl">rein</span></button>
+    <button id="minus" class="pad minus"><span class="sign">−</span><span class="lbl" data-i18n="room.out"></span></button>
+    <button id="plus" class="pad plus"><span class="sign">+</span><span class="lbl" data-i18n="room.in"></span></button>
   </div>
 </section>
 
@@ -195,11 +211,11 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 <section id="stats" class="screen">
   <div class="wrap">
     <div class="head" style="align-items:center">
-      <button id="stats-back" class="dim" style="font-size:.9rem">‹ Zurück</button>
+      <button id="stats-back" class="dim" style="font-size:.9rem"><span class="chev">‹</span> <span data-i18n="stats.back"></span></button>
       <span style="font-weight:700" id="stats-title"></span>
       <span style="width:3.5rem"></span>
     </div>
-    <h1 style="margin-bottom:16px">Statistik</h1>
+    <h1 style="margin-bottom:16px" data-i18n="stats.heading"></h1>
     <input id="stats-day" type="date" style="margin-bottom:24px">
     <div id="stats-body"></div>
   </div>
@@ -207,6 +223,7 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { SPRACHEN, uebersetze, spracheRaten, istRtl } from './i18n.js';
 
 /* ================================================================
    EINSTELLUNGEN – hier die eigenen Werte eintragen.
@@ -220,6 +237,53 @@ const ZEITZONE          = 'Europe/Berlin';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = (id) => document.getElementById(id);
+const t = (schluessel, werte) => uebersetze(sprache, schluessel, werte);
+
+/* Setzt alle Texte im Markup neu. Laeuft beim Start und bei jedem Wechsel. */
+function spracheAnwenden() {
+  document.documentElement.lang = sprache;
+  document.documentElement.dir = istRtl(sprache) ? 'rtl' : 'ltr';
+  document.title = 'inug – ' + t('app.title');
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPh);
+  });
+
+  // Texte, die von Zustand oder Zahlen abhaengen
+  $('edit-toggle').textContent = t(bearbeiten ? 'list.done' : 'list.edit');
+  $('entrance-name').textContent = eingang();
+  document.querySelectorAll('.lang').forEach(sel => { sel.value = sprache; });
+  if (bereich && $('room').classList.contains('on')) zeichne();
+  if (bereich && $('stats').classList.contains('on')) statistikLaden();
+  if ($('list').classList.contains('on')) bereicheLaden();
+  banner();
+}
+
+function spracheWaehlen(code) {
+  sprache = code;
+  localStorage.setItem('inug:lang', code);
+  spracheAnwenden();
+}
+
+function sprachauswahlBauen() {
+  document.querySelectorAll('.lang').forEach(sel => {
+    sel.innerHTML = '';
+    for (const s of SPRACHEN) {
+      const o = document.createElement('option');
+      o.value = s.code; o.textContent = s.name;
+      sel.appendChild(o);
+    }
+    sel.value = sprache;
+    sel.onchange = (e) => spracheWaehlen(e.target.value);
+  });
+}
+
+const zahl = (n, stellen = 0) => new Intl.NumberFormat(sprache, {
+  minimumFractionDigits: stellen, maximumFractionDigits: stellen }).format(n);
+
 const zwei = (n) => String(n).padStart(2, '0');
 const tagVon = (d = new Date()) => `${d.getFullYear()}-${zwei(d.getMonth()+1)}-${zwei(d.getDate())}`;
 const uhr = (ts) => { const d = new Date(ts); return `${zwei(d.getHours())}:${zwei(d.getMinutes())}`; };
@@ -229,6 +293,7 @@ let serverStand = 0;     // letzter von der Datenbank bestätigter Stand
 let ausstehend = [];     // Klicks, die noch nicht gespeichert werden konnten
 let sendetGerade = false;
 let netzOk = true;
+let sprache = localStorage.getItem('inug:lang') || spracheRaten();
 let stockt = false;      // letzter Sendeversuch ist fehlgeschlagen
 let bannerTimer = null;
 const GEDULD = 2500;     // ms, bevor ein liegengebliebener Klick gemeldet wird
@@ -239,12 +304,10 @@ let wakeLock = null;
 
 /* ---------- Gerätename (Eingang) ---------- */
 function eingang() {
-  let n = localStorage.getItem('inug:entrance');
-  if (!n) { n = 'Eingang'; localStorage.setItem('inug:entrance', n); }
-  return n;
+  return localStorage.getItem('inug:entrance') || t('entrance.default');
 }
 function eingangSetzen() {
-  const n = prompt('Wie heißt dieser Eingang?', eingang());
+  const n = prompt(t('list.entrancePrompt'), eingang());
   if (n && n.trim()) {
     localStorage.setItem('inug:entrance', n.trim());
     $('entrance-name').textContent = n.trim();
@@ -284,11 +347,11 @@ function banner() {
   if (n > 0) {
     el.style.background = '#101820';
     el.style.color = '#FFFFFF';
-    el.textContent = `Offline – ${n} ${n === 1 ? 'Zählung wird' : 'Zählungen werden'} nachgereicht`;
+    el.textContent = t('banner.pending', { n });
   } else {
     el.style.background = '#FFFFFF';
     el.style.color = '#D50000';
-    el.textContent = 'Keine Verbindung zur Datenbank';
+    el.textContent = t('banner.offline');
   }
   el.classList.add('show');
 }
@@ -359,9 +422,9 @@ async function bereicheLaden() {
     if (bearbeiten) {
       const del = document.createElement('button');
       del.className = 'del';
-      del.textContent = 'Löschen';
+      del.textContent = t('list.delete');
       del.onclick = async () => {
-        if (!confirm(`„${b.name}" mit allen Zähldaten löschen?`)) return;
+        if (!confirm(t('list.deleteConfirm', { name: b.name }))) return;
         await sb.from('areas').delete().eq('id', b.id);
         bereicheLaden();
       };
@@ -373,7 +436,7 @@ async function bereicheLaden() {
 
 $('edit-toggle').onclick = () => {
   bearbeiten = !bearbeiten;
-  $('edit-toggle').textContent = bearbeiten ? 'Fertig' : 'Bearbeiten';
+  $('edit-toggle').textContent = t(bearbeiten ? 'list.done' : 'list.edit');
   bereicheLaden();
 };
 $('new-open').onclick = () => {
@@ -392,7 +455,7 @@ $('new-save').onclick = async () => {
   const max = parseInt($('new-max').value, 10);
   if (!name || !max || max < 1) return;
   const { error } = await sb.from('areas').insert({ name, max_guests: max });
-  if (error) { alert('Bereich konnte nicht angelegt werden: ' + error.message); return; }
+  if (error) { alert(t('list.createFailed', { msg: error.message })); return; }
   $('new-name').value = ''; $('new-max').value = '';
   $('new-cancel').click();
   bereicheLaden();
@@ -406,7 +469,7 @@ async function raumOeffnen(b) {
   serverStand = b.current_count;
   ausstehend = outboxLaden(b.id);
   $('room-title').textContent = b.name;
-  $('room-max').textContent = b.max_guests;
+  $('room-of').textContent = t('room.of', { max: b.max_guests });
   $('reset-confirm').classList.add('hidden');
   $('reset-ask').classList.remove('hidden');
   zeige('room');
@@ -520,9 +583,10 @@ function zeichne(puls) {
   if (puls) { el.classList.add('pulse'); setTimeout(() => el.classList.remove('pulse'), 160); }
   $('gauge').style.width = Math.min(100, (wert / bereich.max_guests) * 100) + '%';
   const frei = Math.max(0, bereich.max_guests - wert);
+  $('room-of').textContent = t('room.of', { max: bereich.max_guests });
   $('status').textContent = wert >= bereich.max_guests
-    ? 'Voll – niemanden mehr reinlassen'
-    : `Noch ${frei} ${frei === 1 ? 'Platz' : 'Plätze'} frei`;
+    ? t('room.full')
+    : t('room.free', { n: frei });
   $('minus').disabled = wert === 0;
   banner();
 }
@@ -557,7 +621,7 @@ $('reset-yes').onclick = async () => {
   zeichne();
   const { error } = await sb.rpc('reset_count', { p_area_id: bereich.id, p_entrance: eingang() });
   verbindung(!error);
-  if (error) alert('Zurücksetzen hat nicht geklappt – bitte mit Verbindung nochmal probieren.');
+  if (error) alert(t('room.resetFailed'));
 };
 
 $('room-back').onclick = async () => {
@@ -599,40 +663,39 @@ async function statistikLaden() {
   const tag = $('stats-day').value;
   if (!tag) return;
   const body = $('stats-body');
-  body.innerHTML = '<p class="dim">lädt …</p>';
+  body.innerHTML = `<p class="dim">${t('stats.loading')}</p>`;
 
   const [{ data: s, error: e1 }, { data: h, error: e2 }] = await Promise.all([
     sb.rpc('day_stats',   { p_area_id: bereich.id, p_day: tag, p_tz: ZEITZONE }),
     sb.rpc('day_history', { p_area_id: bereich.id, p_day: tag, p_tz: ZEITZONE }),
   ]);
 
-  if (e1 || e2) { body.innerHTML = '<p class="dim">Daten konnten nicht geladen werden.</p>'; return; }
+  if (e1 || e2) { body.innerHTML = `<p class="dim">${t('stats.loadError')}</p>`; return; }
   const k = Array.isArray(s) ? s[0] : s;
   if (!k || !k.first_at || !h || h.length === 0) {
-    body.innerHTML = `<div class="empty"><b>Für diesen Tag gibt es keine Daten.</b>
-      <span class="dim" style="font-size:.9rem">Sobald im Bereich gezählt wird, erscheint hier der Verlauf.</span></div>`;
+    body.innerHTML = `<div class="empty"><b>${t('stats.noDataTitle')}</b>
+      <span class="dim" style="font-size:.9rem">${t('stats.noDataText')}</span></div>`;
     return;
   }
 
-  const schnitt = Number(k.avg_occupancy).toFixed(1).replace('.', ',');
+  const schnitt = zahl(Number(k.avg_occupancy), 1);
   const peakRot = k.peak >= bereich.max_guests;
 
   body.innerHTML = `
     <div class="grid">
-      <div class="kpi"><div class="n tabular" style="color:#00C853">${k.total_in}</div><div class="l">insgesamt reingegangen</div></div>
-      <div class="kpi"><div class="n tabular" style="color:#FFC400">${k.total_out}</div><div class="l">insgesamt rausgegangen</div></div>
-      <div class="kpi"><div class="n tabular">${schnitt}</div><div class="l">durchschnittlich im Raum</div></div>
-      <div class="kpi"><div class="n tabular" style="${peakRot ? 'color:#FF1744' : ''}">${k.peak}</div><div class="l">Höchststand, ${uhr(k.peak_at)} Uhr</div></div>
+      <div class="kpi"><div class="n tabular" style="color:#00C853">${zahl(k.total_in)}</div><div class="l">${t('stats.totalIn')}</div></div>
+      <div class="kpi"><div class="n tabular" style="color:#FFC400">${zahl(k.total_out)}</div><div class="l">${t('stats.totalOut')}</div></div>
+      <div class="kpi"><div class="n tabular">${schnitt}</div><div class="l">${t('stats.average')}</div></div>
+      <div class="kpi"><div class="n tabular" style="${peakRot ? 'color:#FF1744' : ''}">${zahl(k.peak)}</div><div class="l">${t('stats.peak', { time: uhr(k.peak_at) })}</div></div>
     </div>
     <div class="chart">
       <div class="chart-head">
-        <span style="font-weight:700">Verlauf</span>
-        <span class="dim" style="font-size:.85rem">${uhr(k.first_at)} – ${uhr(k.last_at)} Uhr</span>
+        <span style="font-weight:700">${t('stats.history')}</span>
+        <span class="dim" style="font-size:.85rem" dir="ltr">${uhr(k.first_at)} – ${uhr(k.last_at)}</span>
       </div>
       ${verlaufSvg(h, tag)}
       <p class="dim" style="font-size:.75rem;margin-top:12px;line-height:1.5">
-        Maximale Gästezahl: ${bereich.max_guests}. Der Durchschnitt ist über die Zeit
-        gewichtet, gerechnet ab der ersten Zählung des Tages.
+        ${t('stats.footnote', { max: bereich.max_guests })}
       </p>
     </div>`;
 }
@@ -676,8 +739,8 @@ function verlaufSvg(rows, tag) {
               text-anchor="${i === 0 ? 'start' : i === 3 ? 'end' : 'middle'}">${uhr(t)}</text>`;
   }
 
-  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
-            aria-label="Belegungsverlauf über den Tag">
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" dir="ltr"
+            aria-label="${t('stats.chartLabel')}">
       ${gitter}${achse}
       <path d="${d}" fill="none" stroke="#00C853" stroke-width="3"
             stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
@@ -687,6 +750,9 @@ function verlaufSvg(rows, tag) {
 /* ================================================================
    Start
    ================================================================ */
+sprachauswahlBauen();
+spracheAnwenden();
+
 if (localStorage.getItem('inug:unlocked') === '1') entsperrt();
 else $('pw').focus();
 
