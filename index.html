@@ -210,8 +210,10 @@ const tagVon = (d = new Date()) => `${d.getFullYear()}-${zwei(d.getMonth()+1)}-$
 const uhr = (ts) => { const d = new Date(ts); return `${zwei(d.getHours())}:${zwei(d.getMinutes())}`; };
 
 let bereich = null;      // aktuell geöffneter Bereich
-let stand = 0;
-let offenePlus = 0;      // eigene Klicks, die noch nicht bestätigt sind
+let serverStand = 0;     // letzter von der Datenbank bestätigter Stand
+let ausstehend = [];     // Klicks, die noch nicht gespeichert werden konnten
+let sendetGerade = false;
+let netzOk = true;
 let kanal = null;
 let abgleichTimer = null;
 let bearbeiten = false;
@@ -238,7 +240,21 @@ function zeige(id) {
   window.scrollTo(0, 0);
 }
 
-function verbindung(ok) { $('offline').classList.toggle('hidden', ok); }
+function verbindung(ok) { netzOk = ok; banner(); }
+
+function banner() {
+  const el = $('offline');
+  const n = ausstehend.length;
+  if (netzOk && n === 0) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  if (n > 0) {
+    el.style.background = '#3D2E0D';
+    el.textContent = `Offline – ${n} ${n === 1 ? 'Zählung wird' : 'Zählungen werden'} nachgereicht`;
+  } else {
+    el.style.background = '#45161A';
+    el.textContent = 'Keine Verbindung zur Datenbank';
+  }
+}
 
 /* ================================================================
    Passwort
@@ -349,8 +365,8 @@ $('new-save').onclick = async () => {
    ================================================================ */
 async function raumOeffnen(b) {
   bereich = b;
-  stand = b.current_count;
-  offenePlus = 0;
+  serverStand = b.current_count;
+  ausstehend = outboxLaden(b.id);
   $('room-title').textContent = b.name;
   $('room-max').textContent = b.max_guests;
   $('reset-confirm').classList.add('hidden');
@@ -361,8 +377,9 @@ async function raumOeffnen(b) {
 
   if (kanal) await sb.removeChannel(kanal);
   await abonnieren();
+  senden();                       // liegengebliebene Klicks nachreichen
   clearInterval(abgleichTimer);
-  abgleichTimer = setInterval(abgleichen, 15000);
+  abgleichTimer = setInterval(() => { senden(); abgleichen(); }, 5000);
 }
 
 /* Live-Verbindung zum Bereich. Bricht sie ab, wird neu verbunden –
@@ -374,9 +391,16 @@ async function abonnieren() {
   kanal = sb.channel(`area:${id}`)
     .on('postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'count_events', filter: `area_id=eq.${id}` },
-      (p) => { if (offenePlus === 0) { stand = p.new.resulting_count; zeichne(); } })
+      (p) => {
+        const r = p.new;
+        // War das ein eigener Klick, gilt er hiermit als bestätigt
+        const i = ausstehend.findIndex(e => e.id === r.client_event_id);
+        if (i !== -1) { ausstehend.splice(i, 1); outboxSpeichern(); }
+        serverStand = r.resulting_count;
+        zeichne();
+      })
     .subscribe((status) => {
-      if (status === 'SUBSCRIBED') { verbindung(true); abgleichen(); }
+      if (status === 'SUBSCRIBED') { verbindung(true); senden(); abgleichen(); }
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         verbindung(false);
         setTimeout(abonnieren, 2000);
@@ -384,44 +408,95 @@ async function abonnieren() {
     });
 }
 
-/* Sicherheitsnetz alle 15 s: holt den echten Stand aus der Datenbank,
-   überschreibt aber nie eigene Klicks, die noch unterwegs sind. */
+/* Sicherheitsnetz: holt den echten Serverstand. Noch nicht gesendete
+   Klicks bleiben davon unberührt, sie liegen ja obendrauf. */
 async function abgleichen() {
-  if (!bereich || offenePlus > 0) return;
+  if (!bereich) return;
   const { data, error } = await sb
     .from('area_status').select('current_count').eq('id', bereich.id).maybeSingle();
   verbindung(!error);
-  if (error || !data || offenePlus > 0) return;
-  if (data.current_count !== stand) { stand = data.current_count; zeichne(); }
+  if (error || !data) return;
+  if (data.current_count !== serverStand) { serverStand = data.current_count; zeichne(); }
 }
+
+/* ---------- Warteschlange ---------- */
+
+// Angezeigter Stand = bestätigter Serverstand + alles, was noch unterwegs ist
+function anzeige() {
+  return Math.max(0, serverStand + ausstehend.reduce((s, e) => s + e.delta, 0));
+}
+
+function outboxSchluessel(id) { return `inug:outbox:${id}`; }
+function outboxLaden(id) {
+  try { return JSON.parse(localStorage.getItem(outboxSchluessel(id))) || []; }
+  catch { return []; }
+}
+function outboxSpeichern() {
+  if (!bereich) return;
+  localStorage.setItem(outboxSchluessel(bereich.id), JSON.stringify(ausstehend));
+  banner();
+}
+
+function neueKennung() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+}
+
+/* Arbeitet die Warteschlange der Reihe nach ab. Schlägt ein Aufruf fehl,
+   bleibt er stehen und wird beim nächsten Versuch erneut geschickt. */
+async function senden() {
+  if (sendetGerade || !bereich || ausstehend.length === 0) return;
+  sendetGerade = true;
+  try {
+    while (ausstehend.length > 0 && bereich) {
+      const e = ausstehend[0];
+      const { data, error } = await sb.rpc('adjust_count', {
+        p_area_id: bereich.id,
+        p_delta: e.delta,
+        p_entrance: eingang(),
+        p_client_event_id: e.id,
+      });
+      if (error) { verbindung(false); break; }
+      const i = ausstehend.findIndex(x => x.id === e.id);
+      if (i !== -1) { ausstehend.splice(i, 1); outboxSpeichern(); }
+      if (typeof data === 'number') serverStand = data;
+      zeichne();
+    }
+    if (ausstehend.length === 0) verbindung(true);
+  } finally {
+    sendetGerade = false;
+  }
+}
+
+/* ---------- Anzeige ---------- */
 
 function zeichne(puls) {
-  const z = zustand(stand, bereich.max_guests);
+  if (!bereich) return;
+  const wert = anzeige();
+  const z = zustand(wert, bereich.max_guests);
   document.body.className = 'state-' + z;
   const el = $('count');
-  el.textContent = stand;
+  el.textContent = wert;
   if (puls) { el.classList.add('pulse'); setTimeout(() => el.classList.remove('pulse'), 160); }
-  $('gauge').style.width = Math.min(100, (stand / bereich.max_guests) * 100) + '%';
-  const frei = Math.max(0, bereich.max_guests - stand);
-  $('status').textContent = stand >= bereich.max_guests
+  $('gauge').style.width = Math.min(100, (wert / bereich.max_guests) * 100) + '%';
+  const frei = Math.max(0, bereich.max_guests - wert);
+  $('status').textContent = wert >= bereich.max_guests
     ? 'Voll – niemanden mehr reinlassen'
     : `Noch ${frei} ${frei === 1 ? 'Platz' : 'Plätze'} frei`;
-  $('minus').disabled = stand === 0;
+  $('minus').disabled = wert === 0;
+  banner();
 }
 
-async function zaehlen(delta) {
-  if (delta < 0 && stand === 0) return;
-  stand = Math.max(0, stand + delta);
+/* Ein Klick landet zuerst in der Warteschlange – nie direkt im Netz.
+   Dadurch geht auch ohne Empfang nichts verloren. */
+function zaehlen(delta) {
+  if (delta < 0 && anzeige() === 0) return;
+  ausstehend.push({ id: neueKennung(), delta, t: Date.now() });
+  outboxSpeichern();
   zeichne(true);
   if (navigator.vibrate) navigator.vibrate(12);
-
-  offenePlus++;
-  const { data, error } = await sb.rpc('adjust_count', {
-    p_area_id: bereich.id, p_delta: delta, p_entrance: eingang()
-  });
-  offenePlus--;
-  verbindung(!error);
-  if (!error && offenePlus === 0) { stand = data; zeichne(); }
+  senden();
 }
 
 $('plus').onclick  = () => zaehlen(1);
@@ -437,11 +512,13 @@ $('reset-no').onclick = () => {
 };
 $('reset-yes').onclick = async () => {
   $('reset-no').click();
-  stand = 0; zeichne();
-  offenePlus++;
+  ausstehend = [];              // offene Klicks verfallen beim Zurücksetzen
+  outboxSpeichern();
+  serverStand = 0;
+  zeichne();
   const { error } = await sb.rpc('reset_count', { p_area_id: bereich.id, p_entrance: eingang() });
-  offenePlus--;
   verbindung(!error);
+  if (error) alert('Zurücksetzen hat nicht geklappt – bitte mit Verbindung nochmal probieren.');
 };
 
 $('room-back').onclick = async () => {
@@ -463,6 +540,7 @@ document.addEventListener('visibilitychange', () => {
   if (!bereich || !$('room').classList.contains('on')) return;
   bildschirmWach();
   abonnieren();   // Verbindung kann im Hintergrund abgebaut worden sein
+  senden();
 });
 
 /* ================================================================
@@ -573,7 +651,7 @@ function verlaufSvg(rows, tag) {
 if (localStorage.getItem('inug:unlocked') === '1') entsperrt();
 else $('pw').focus();
 
-window.addEventListener('online',  () => { verbindung(true); abonnieren(); });
+window.addEventListener('online',  () => { verbindung(true); abonnieren(); senden(); });
 window.addEventListener('offline', () => verbindung(false));
 </script>
 </body>
