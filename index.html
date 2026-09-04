@@ -16,18 +16,20 @@
 :root{
   --ink:#151D26; --panel:#1E2A35; --line:#31404E;
   --text:#F1EFE9; --dim:#93A4B2;
-  --bg:#151D26; --accent:#45C795;
+  --bg:#151D26; --on-bg:#F1EFE9;
 }
-body.state-ok   { --bg:#10382A; --accent:#45C795; }
-body.state-warn { --bg:#3D2E0D; --accent:#E9AC3C; }
-body.state-full { --bg:#45161A; --accent:#F4675A; }
+/* Signalfarben: der ganze Bildschirm ist die Ampel, damit der Zustand
+   auch aus einigen Metern Entfernung erkennbar ist. */
+body.state-ok   { --bg:#00C853; --on-bg:#04240F; }
+body.state-warn { --bg:#FFC400; --on-bg:#2B2000; }
+body.state-full { --bg:#E80029; --on-bg:#FFFFFF; }
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
-  background:var(--bg); color:var(--text);
+  background:var(--bg); color:var(--on-bg);
   font-family:'Archivo','Helvetica Neue',system-ui,sans-serif;
-  transition:background-color .3s ease;
+  transition:background-color .25s ease, color .25s ease;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   overscroll-behavior:none;
 }
@@ -48,7 +50,7 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--text);outline-o
 h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 .big-btn{width:100%;background:var(--text);color:var(--ink);border-radius:10px;padding:16px;font-weight:700;font-size:1.05rem;margin-top:14px}
 .ghost-btn{width:100%;border:1px solid var(--line);border-radius:10px;padding:16px;font-weight:700;margin-top:14px}
-.err{color:#F4675A;font-size:.9rem;margin-top:10px}
+.err{color:#FF1744;font-size:.9rem;margin-top:10px}
 
 /* Liste */
 .head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px}
@@ -59,8 +61,8 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 .card-name{font-size:1.2rem;font-weight:700}
 .card-count{font-size:1.2rem;font-weight:900}
 .bar{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:14px}
-.bar>i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .2s}
-.del{border:1px solid #F4675A;color:#F4675A;border-radius:10px;padding:0 16px;font-size:.9rem;font-weight:700}
+.bar>i{display:block;height:100%;border-radius:99px;background:#00C853;transition:width .2s}
+.del{border:1px solid #FF1744;color:#FF1744;border-radius:10px;padding:0 16px;font-size:.9rem;font-weight:700}
 .empty{border:1px dashed var(--line);border-radius:10px;padding:24px}
 .empty b{display:block;margin-bottom:4px}
 .form{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:20px}
@@ -78,20 +80,20 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 .count{font-size:min(38vw,11rem);font-weight:900;line-height:1;letter-spacing:-.045em;transition:transform .15s}
 .count.pulse{transform:scale(1.045)}
 .of{font-size:1.1rem;font-weight:500;opacity:.7;margin-top:4px}
-.gauge{height:8px;width:100%;max-width:24rem;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:30px}
-.gauge>i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .2s}
-.status{margin-top:16px;font-size:1.15rem;font-weight:700;color:var(--accent)}
-.subtle{margin-top:22px;font-size:.85rem;opacity:.55}
+.gauge{height:10px;width:100%;max-width:24rem;border-radius:99px;background:rgba(0,0,0,.22);overflow:hidden;margin-top:30px}
+.gauge>i{display:block;height:100%;border-radius:99px;background:var(--on-bg);transition:width .2s}
+.status{margin-top:16px;font-size:1.2rem;font-weight:900;color:var(--on-bg)}
+.subtle{margin-top:22px;font-size:.85rem;opacity:.65}
 .confirm{margin-top:22px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;font-size:.9rem}
-.confirm .yes{background:var(--text);color:var(--bg);border-radius:8px;padding:8px 14px;font-weight:700}
+.confirm .yes{background:var(--on-bg);color:var(--bg);border-radius:8px;padding:8px 14px;font-weight:700}
 .pads{display:flex;gap:12px;padding:0 16px 24px;height:32vh;min-height:150px}
 .pad{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:18px;transition:transform .12s}
 .pad:active{transform:scale(.96)}
 .pad .sign{font-size:3.6rem;font-weight:900;line-height:1}
 .pad .lbl{margin-top:8px;font-size:1rem;font-weight:700}
-.pad.minus{border:2px solid rgba(255,255,255,.4)}
-.pad.minus[disabled]{border-color:rgba(255,255,255,.12);opacity:.35}
-.pad.plus{background:var(--text);color:var(--bg)}
+.pad.minus{border:3px solid var(--on-bg);opacity:.85}
+.pad.minus[disabled]{opacity:.28}
+.pad.plus{background:var(--on-bg);color:var(--bg)}
 
 /* Statistik */
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
@@ -136,8 +138,8 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
       <button id="edit-toggle" class="dim hidden" style="font-size:.9rem">Bearbeiten</button>
     </div>
     <div id="areas"></div>
-    <div id="list-error" class="empty hidden" style="border-color:#F4675A">
-      <b style="color:#F4675A">Keine Verbindung zur Datenbank.</b>
+    <div id="list-error" class="empty hidden" style="border-color:#FF1744">
+      <b style="color:#FF1744">Keine Verbindung zur Datenbank.</b>
       <span class="dim" style="font-size:.9rem">Prüfe die Internetverbindung. Die Liste lädt sich automatisch, sobald die Verbindung wieder steht.</span>
     </div>
     <div id="area-empty" class="empty hidden">
@@ -280,12 +282,12 @@ function banner() {
   }
 
   if (n > 0) {
-    el.style.background = '#E9AC3C';
-    el.style.color = '#241A05';
+    el.style.background = '#101820';
+    el.style.color = '#FFFFFF';
     el.textContent = `Offline – ${n} ${n === 1 ? 'Zählung wird' : 'Zählungen werden'} nachgereicht`;
   } else {
-    el.style.background = '#F4675A';
-    el.style.color = '#2A0B0B';
+    el.style.background = '#FFFFFF';
+    el.style.color = '#D50000';
     el.textContent = 'Keine Verbindung zur Datenbank';
   }
   el.classList.add('show');
@@ -320,7 +322,7 @@ function zustand(c, max) {
   const q = c / max;
   return q >= 1 ? 'full' : q >= 0.8 ? 'warn' : 'ok';
 }
-const AKZENT = { ok:'#45C795', warn:'#E9AC3C', full:'#F4675A' };
+const AKZENT = { ok:'#00C853', warn:'#FFC400', full:'#FF1744' };
 
 async function bereicheLaden() {
   const { data, error } = await sb.from('area_status').select('*').order('name');
@@ -617,10 +619,10 @@ async function statistikLaden() {
 
   body.innerHTML = `
     <div class="grid">
-      <div class="kpi"><div class="n tabular" style="color:#45C795">${k.total_in}</div><div class="l">insgesamt reingegangen</div></div>
-      <div class="kpi"><div class="n tabular" style="color:#E9AC3C">${k.total_out}</div><div class="l">insgesamt rausgegangen</div></div>
+      <div class="kpi"><div class="n tabular" style="color:#00C853">${k.total_in}</div><div class="l">insgesamt reingegangen</div></div>
+      <div class="kpi"><div class="n tabular" style="color:#FFC400">${k.total_out}</div><div class="l">insgesamt rausgegangen</div></div>
       <div class="kpi"><div class="n tabular">${schnitt}</div><div class="l">durchschnittlich im Raum</div></div>
-      <div class="kpi"><div class="n tabular" style="${peakRot ? 'color:#F4675A' : ''}">${k.peak}</div><div class="l">Höchststand, ${uhr(k.peak_at)} Uhr</div></div>
+      <div class="kpi"><div class="n tabular" style="${peakRot ? 'color:#FF1744' : ''}">${k.peak}</div><div class="l">Höchststand, ${uhr(k.peak_at)} Uhr</div></div>
     </div>
     <div class="chart">
       <div class="chart-head">
@@ -664,7 +666,7 @@ function verlaufSvg(rows, tag) {
   }
   // Kapazitätslinie
   const yk = y(bereich.max_guests);
-  gitter += `<line x1="${L}" y1="${yk}" x2="${W - R}" y2="${yk}" stroke="#F4675A" stroke-width="1" stroke-dasharray="4 4" opacity=".7"/>`;
+  gitter += `<line x1="${L}" y1="${yk}" x2="${W - R}" y2="${yk}" stroke="#FF1744" stroke-width="1.5" stroke-dasharray="5 4" opacity=".9"/>`;
 
   // X-Beschriftung
   let achse = '';
@@ -677,7 +679,7 @@ function verlaufSvg(rows, tag) {
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
             aria-label="Belegungsverlauf über den Tag">
       ${gitter}${achse}
-      <path d="${d}" fill="none" stroke="#45C795" stroke-width="2.5"
+      <path d="${d}" fill="none" stroke="#00C853" stroke-width="3"
             stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
     </svg>`;
 }
