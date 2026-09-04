@@ -101,12 +101,20 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 .chart{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 16px 14px}
 .chart-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
 .chart svg{width:100%;height:auto;display:block}
-.offline{background:#45161A;color:#F1EFE9;text-align:center;padding:8px;font-size:.85rem;font-weight:700}
+/* Statusleiste: belegt immer dieselbe Höhe, damit beim Ein- und
+   Ausblenden weder Zahl noch Tasten verrutschen. */
+.statusbar{flex:0 0 34px;height:34px;display:flex;align-items:center;justify-content:center;padding:0 16px;margin-top:8px}
+#offline{
+  max-width:100%;padding:6px 14px;border-radius:99px;
+  font-size:.8rem;font-weight:700;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  opacity:0;transform:translateY(-3px);transition:opacity .18s,transform .18s;
+  pointer-events:none;
+}
+#offline.show{opacity:1;transform:none}
 </style>
 </head>
 <body>
-
-<div id="offline" class="offline hidden">Keine Verbindung – Zählungen werden nicht gespeichert</div>
 
 <!-- ============ Passwort ============ -->
 <section id="lock" class="screen on">
@@ -128,6 +136,10 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
       <button id="edit-toggle" class="dim hidden" style="font-size:.9rem">Bearbeiten</button>
     </div>
     <div id="areas"></div>
+    <div id="list-error" class="empty hidden" style="border-color:#F4675A">
+      <b style="color:#F4675A">Keine Verbindung zur Datenbank.</b>
+      <span class="dim" style="font-size:.9rem">Prüfe die Internetverbindung. Die Liste lädt sich automatisch, sobald die Verbindung wieder steht.</span>
+    </div>
     <div id="area-empty" class="empty hidden">
       <b>Noch kein Bereich angelegt.</b>
       <span class="dim" style="font-size:.9rem">Leg einen Bereich mit Namen und maximaler Gästezahl an. Alle Eingänge, die diese Seite öffnen, zählen dann auf denselben Stand.</span>
@@ -158,6 +170,7 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
     <span class="title" id="room-title"></span>
     <button id="room-stats">Statistik</button>
   </div>
+  <div class="statusbar"><span id="offline"></span></div>
   <div class="stage">
     <div id="count" class="count tabular">–</div>
     <div class="of">von <span id="room-max"></span></div>
@@ -244,16 +257,19 @@ function verbindung(ok) { netzOk = ok; banner(); }
 
 function banner() {
   const el = $('offline');
+  if (!el) return;
   const n = ausstehend.length;
-  if (netzOk && n === 0) { el.classList.add('hidden'); return; }
-  el.classList.remove('hidden');
+  if (netzOk && n === 0) { el.classList.remove('show'); return; }
   if (n > 0) {
-    el.style.background = '#3D2E0D';
+    el.style.background = '#E9AC3C';
+    el.style.color = '#241A05';
     el.textContent = `Offline – ${n} ${n === 1 ? 'Zählung wird' : 'Zählungen werden'} nachgereicht`;
   } else {
-    el.style.background = '#45161A';
+    el.style.background = '#F4675A';
+    el.style.color = '#2A0B0B';
     el.textContent = 'Keine Verbindung zur Datenbank';
   }
+  el.classList.add('show');
 }
 
 /* ================================================================
@@ -290,7 +306,8 @@ const AKZENT = { ok:'#45C795', warn:'#E9AC3C', full:'#F4675A' };
 async function bereicheLaden() {
   const { data, error } = await sb.from('area_status').select('*').order('name');
   verbindung(!error);
-  if (error) return;
+  $('list-error').classList.toggle('hidden', !error);
+  if (error) { $('area-empty').classList.add('hidden'); return; }
 
   const box = $('areas');
   box.innerHTML = '';
