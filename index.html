@@ -223,7 +223,7 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { SPRACHEN, uebersetze, spracheRaten, istRtl } from './i18n.js';
+import { sprachenSortiert, uebersetze, spracheRaten, istRtl } from './i18n.js';
 
 /* ================================================================
    EINSTELLUNGEN – hier die eigenen Werte eintragen.
@@ -271,7 +271,7 @@ function spracheWaehlen(code) {
 function sprachauswahlBauen() {
   document.querySelectorAll('.lang').forEach(sel => {
     sel.innerHTML = '';
-    for (const s of SPRACHEN) {
+    for (const s of sprachenSortiert()) {
       const o = document.createElement('option');
       o.value = s.code; o.textContent = s.name;
       sel.appendChild(o);

@@ -11,19 +11,27 @@
 
 export const STANDARD = 'en';
 
+/* Reihenfolge egal – die Auswahl wird alphabetisch sortiert ausgegeben. */
 export const SPRACHEN = [
-  { code: 'en', name: 'English'    },
-  { code: 'de', name: 'Deutsch'    },
-  { code: 'tr', name: 'Türkçe'     },
-  { code: 'ru', name: 'Русский'    },
-  { code: 'uk', name: 'Українська' },
-  { code: 'pl', name: 'Polski'     },
-  { code: 'es', name: 'Español'    },
-  { code: 'nl', name: 'Nederlands' },
   { code: 'ar', name: 'العربية', rtl: true },
-  { code: 'it', name: 'Italiano'   },
+  { code: 'de', name: 'Deutsch'    },
+  { code: 'en', name: 'English'    },
+  { code: 'es', name: 'Español'    },
   { code: 'fr', name: 'Français'   },
+  { code: 'it', name: 'Italiano'   },
+  { code: 'nl', name: 'Nederlands' },
+  { code: 'pl', name: 'Polski'     },
+  { code: 'ru', name: 'Русский'    },
+  { code: 'tr', name: 'Türkçe'     },
+  { code: 'uk', name: 'Українська' },
 ];
+
+/* Nach Eigenname sortiert. Intl.Collator ordnet innerhalb einer Schrift
+   korrekt (ä bei a, ń bei n) und gruppiert Schriften zuverlässig. */
+export function sprachenSortiert() {
+  const c = new Intl.Collator(undefined, { sensitivity: 'base' });
+  return [...SPRACHEN].sort((a, b) => c.compare(a.name, b.name));
+}
 
 export const TEXTE = {
 
