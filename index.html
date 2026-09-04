@@ -121,6 +121,51 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
 
 /* Bei Rechts-nach-links-Sprachen zeigt der Zurück-Pfeil in die andere Richtung */
 [dir="rtl"] .chev{display:inline-block;transform:scaleX(-1)}
+
+/* Eingangsauswahl */
+.ent{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:12px;text-align:start}
+.ent .nm{display:block;font-size:1.15rem;font-weight:700}
+.ent .st{display:block;font-size:.85rem;margin-top:4px}
+.ent .st.free{color:#00C853}
+.ent .st.busy{color:#FFC400}
+.dot{width:12px;height:12px;border-radius:99px;flex:0 0 12px}
+
+/* Wer steht gerade an welcher Tür – Leiste im Zählbildschirm */
+.doors{display:flex;gap:8px;overflow-x:auto;padding:2px 16px 0;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.doors::-webkit-scrollbar{display:none}
+.doors:empty{display:none}
+.chip{flex:0 0 auto;display:flex;align-items:center;gap:7px;
+  background:rgba(0,0,0,.16);border-radius:99px;padding:6px 12px;
+  font-size:.78rem;line-height:1.2;white-space:nowrap;color:var(--on-bg)}
+.chip.mine{background:var(--on-bg);color:var(--bg);font-weight:700}
+.chip .who{opacity:.75}
+.chip.mine .who{opacity:.85}
+.chip .pip{width:7px;height:7px;border-radius:99px;flex:0 0 7px;background:currentColor;opacity:.5}
+.chip.taken .pip{opacity:1}
+
+/* Übernahme- und Namensdialog */
+.sheet{position:fixed;inset:0;background:rgba(8,12,16,.72);display:flex;align-items:center;
+  justify-content:center;padding:20px;z-index:50}
+.sheet.hidden{display:none}
+.sheet-box{background:var(--ink);border:1px solid var(--line);border-radius:14px;padding:22px;
+  width:100%;max-width:26rem;max-height:90vh;overflow:auto}
+.sheet-box h2{font-size:1.2rem;font-weight:900;margin-bottom:10px}
+.sheet-box p{font-size:.9rem;color:var(--dim);line-height:1.5;margin-bottom:16px}
+.danger{width:100%;background:#FF1744;color:#fff;border-radius:10px;padding:15px;font-weight:700}
+
+/* Verwaltung */
+.admin-area{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:.78rem;color:var(--dim);margin-bottom:6px}
+.field input{background:var(--ink);padding:12px}
+.two{display:flex;gap:10px}
+.two .field{flex:1}
+.ent-edit{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.ent-edit input{background:var(--ink);padding:10px 12px;font-size:.95rem}
+.icon-btn{flex:0 0 auto;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:.8rem;color:var(--dim)}
+.ok-flash{color:#00C853;font-size:.85rem;font-weight:700;margin-inline-start:10px}
 </style>
 </head>
 <body>
@@ -173,11 +218,9 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
       <select id="lang-list" class="lang"></select>
     </div>
 
-    <p class="note">
-      <span data-i18n="list.deviceBefore"></span> <b id="entrance-name"></b>
-      <button id="entrance-edit" style="text-decoration:underline" data-i18n="list.change"></button><br><br>
-      <span data-i18n="list.sharedNote"></span>
-    </p>
+    <button id="admin-open" class="ghost-btn" style="margin-top:12px" data-i18n="list.admin"></button>
+
+    <p class="note"><span data-i18n="list.sharedNote"></span></p>
   </div>
 </section>
 
@@ -189,6 +232,7 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
     <button id="room-stats" data-i18n="room.stats"></button>
   </div>
   <div class="statusbar"><span id="offline"></span></div>
+  <div class="doors" id="room-doors"></div>
   <div class="stage">
     <div id="count" class="count tabular">–</div>
     <div class="of" id="room-of"></div>
@@ -207,6 +251,43 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
   </div>
 </section>
 
+<!-- ============ Eingang wählen ============ -->
+<section id="entrances" class="screen">
+  <div class="wrap">
+    <div class="head" style="align-items:center">
+      <button id="ent-back" class="dim" style="font-size:.9rem"><span class="chev">‹</span> <span data-i18n="common.back"></span></button>
+      <span style="font-weight:700" id="ent-area"></span>
+      <span style="width:3.5rem"></span>
+    </div>
+    <h1 data-i18n="ent.heading"></h1>
+    <p class="dim" style="font-size:.9rem;margin:8px 0 20px" data-i18n="ent.pick"></p>
+    <div id="ent-list"></div>
+    <div id="ent-empty" class="empty hidden">
+      <b data-i18n="ent.none"></b>
+      <span class="dim" style="font-size:.9rem" data-i18n="ent.noneHint"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Verwaltung ============ -->
+<section id="admin" class="screen">
+  <div class="wrap">
+    <div class="head" style="align-items:center">
+      <button id="admin-back" class="dim" style="font-size:.9rem"><span class="chev">‹</span> <span data-i18n="common.back"></span></button>
+      <span style="width:3.5rem"></span>
+    </div>
+    <h1 style="margin-bottom:20px" data-i18n="admin.heading"></h1>
+
+    <div id="admin-gate">
+      <input id="admin-pw" type="password" data-i18n-ph="admin.password" autocomplete="off">
+      <p id="admin-err" class="err hidden" data-i18n="admin.wrong"></p>
+      <button id="admin-go" class="big-btn" data-i18n="admin.unlock"></button>
+    </div>
+
+    <div id="admin-body" class="hidden"></div>
+  </div>
+</section>
+
 <!-- ============ Statistik ============ -->
 <section id="stats" class="screen">
   <div class="wrap">
@@ -221,6 +302,26 @@ h1{font-size:2rem;font-weight:900;line-height:1.05;letter-spacing:-.02em}
   </div>
 </section>
 
+<!-- ============ Dialoge ============ -->
+<div id="sheet-name" class="sheet hidden">
+  <div class="sheet-box">
+    <h2 id="sheet-name-title"></h2>
+    <p data-i18n="ent.nameHint"></p>
+    <input id="claim-name" data-i18n-ph="ent.yourName" autocomplete="name">
+    <button id="claim-go" class="big-btn" data-i18n="ent.start"></button>
+    <button id="claim-cancel" class="ghost-btn" data-i18n="common.cancel"></button>
+  </div>
+</div>
+
+<div id="sheet-takeover" class="sheet hidden">
+  <div class="sheet-box">
+    <h2 id="takeover-title"></h2>
+    <p id="takeover-text"></p>
+    <button id="takeover-go" class="danger" data-i18n="ent.takeover"></button>
+    <button id="takeover-cancel" class="ghost-btn" data-i18n="common.cancel"></button>
+  </div>
+</div>
+
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { sprachenSortiert, uebersetze, spracheRaten, istRtl } from './i18n.js';
@@ -232,6 +333,7 @@ import { sprachenSortiert, uebersetze, spracheRaten, istRtl } from './i18n.js';
 const SUPABASE_URL      = 'https://timggyhfiwespnfzxxbv.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_dqPQ2p7rBLYFw9PoxmvRxw_icmYIXgR';
 const PASSWORT          = 'ibugiscounting';
+const ADMIN_PASSWORT    = 'responsible4counting';
 const ZEITZONE          = 'Europe/Berlin';
 /* ============================================================== */
 
@@ -254,11 +356,12 @@ function spracheAnwenden() {
 
   // Texte, die von Zustand oder Zahlen abhaengen
   $('edit-toggle').textContent = t(bearbeiten ? 'list.done' : 'list.edit');
-  $('entrance-name').textContent = eingang();
   document.querySelectorAll('.lang').forEach(sel => { sel.value = sprache; });
-  if (bereich && $('room').classList.contains('on')) zeichne();
+  if (bereich && $('room').classList.contains('on')) { zeichne(); tuerenZeichnen(); }
   if (bereich && $('stats').classList.contains('on')) statistikLaden();
   if ($('list').classList.contains('on')) bereicheLaden();
+  if ($('entrances').classList.contains('on')) eingaengeLaden();
+  if (adminOffen) adminZeichnen();
   banner();
 }
 
@@ -301,17 +404,25 @@ let kanal = null;
 let abgleichTimer = null;
 let bearbeiten = false;
 let wakeLock = null;
+let eingang = null;        // { id, name } – der belegte Eingang
+let zaehlerName = '';      // wer steht gerade an dieser Tür
+let entKanal = null;       // Live-Verbindung zu den Belegungen
+let herzTimer = null;
+const TOKEN = geraeteToken();   // identifiziert dieses Gerät als Inhaber
 
-/* ---------- Gerätename (Eingang) ---------- */
-function eingang() {
-  return localStorage.getItem('inug:entrance') || t('entrance.default');
+/* Bleibt über Neustarts gleich, damit ein neu geladenes Gerät seine
+   eigene Belegung wiedererkennt statt sich selbst zu verdrängen. */
+function geraeteToken() {
+  let v = localStorage.getItem('inug:token');
+  if (!v) { v = neueKennung(); localStorage.setItem('inug:token', v); }
+  return v;
 }
-function eingangSetzen() {
-  const n = prompt(t('list.entrancePrompt'), eingang());
-  if (n && n.trim()) {
-    localStorage.setItem('inug:entrance', n.trim());
-    $('entrance-name').textContent = n.trim();
-  }
+
+/* "vor 3 Min." bzw. "gerade aktiv" */
+function seit(ts) {
+  if (!ts) return t('ent.justNow');
+  const min = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+  return min < 1 ? t('ent.justNow') : t('ent.lastSeen', { min });
 }
 
 /* ---------- Bildschirmwechsel ---------- */
@@ -361,7 +472,6 @@ function banner() {
    ================================================================ */
 function entsperrt() {
   zeige('list');
-  $('entrance-name').textContent = eingang();
   bereicheLaden();
 }
 $('pw-go').onclick = () => {
@@ -375,15 +485,14 @@ $('pw-go').onclick = () => {
 };
 $('pw').onkeydown = (e) => { if (e.key === 'Enter') $('pw-go').click(); };
 $('pw').oninput = () => $('pw-err').classList.add('hidden');
-$('entrance-edit').onclick = eingangSetzen;
 
 /* ================================================================
    Bereichsliste
    ================================================================ */
-function zustand(c, max) {
+function zustand(c, max, warnProzent = 80) {
   if (!max) return 'ok';
-  const q = c / max;
-  return q >= 1 ? 'full' : q >= 0.8 ? 'warn' : 'ok';
+  const q = (c / max) * 100;
+  return q >= 100 ? 'full' : q >= warnProzent ? 'warn' : 'ok';
 }
 const AKZENT = { ok:'#00C853', warn:'#FFC400', full:'#FF1744' };
 
@@ -399,7 +508,7 @@ async function bereicheLaden() {
   $('edit-toggle').classList.toggle('hidden', data.length === 0);
 
   data.forEach(b => {
-    const z = zustand(b.current_count, b.max_guests);
+    const z = zustand(b.current_count, b.max_guests, b.warn_percent);
     const pct = Math.min(100, b.max_guests ? (b.current_count / b.max_guests) * 100 : 0);
 
     const row = document.createElement('div');
@@ -416,7 +525,7 @@ async function bereicheLaden() {
       </div>
       <div class="bar"><i style="width:${pct}%;background:${AKZENT[z]}"></i></div>`;
     card.querySelector('.card-name').textContent = b.name;
-    card.onclick = () => raumOeffnen(b);
+    card.onclick = () => eingaengeOeffnen(b);
     row.appendChild(card);
 
     if (bearbeiten) {
@@ -462,25 +571,185 @@ $('new-save').onclick = async () => {
 };
 
 /* ================================================================
+   Eingang wählen und belegen
+   ================================================================ */
+let eingaenge = [];
+let gewaehlt = null;          // Eingang, der gerade belegt werden soll
+
+async function eingaengeOeffnen(b) {
+  bereich = b;
+  $('ent-area').textContent = b.name;
+  zeige('entrances');
+  await eingaengeLaden();
+  await entAbonnieren();
+}
+
+async function eingaengeLaden() {
+  if (!bereich) return;
+  const { data, error } = await sb.from('entrances')
+    .select('*').eq('area_id', bereich.id).order('name');
+  verbindung(!error);
+  if (error) return;
+
+  eingaenge = data;
+  tuerenZeichnen();
+
+  const box = $('ent-list');
+  box.innerHTML = '';
+  $('ent-empty').classList.toggle('hidden', data.length > 0);
+
+  data.forEach(e => {
+    const besetzt = !!e.holder_token && e.holder_token !== TOKEN;
+    const btn = document.createElement('button');
+    btn.className = 'ent';
+    btn.innerHTML = `<span><span class="nm"></span><span class="st ${besetzt ? 'busy' : 'free'}"></span></span>
+                     <span class="dot" style="background:${besetzt ? '#FFC400' : '#00C853'}"></span>`;
+    btn.querySelector('.nm').textContent = e.name;
+    btn.querySelector('.st').textContent = besetzt
+      ? t('ent.busy', { name: e.held_by || '?' }) + ' \u00b7 ' + seit(e.last_seen)
+      : t('ent.free');
+    btn.onclick = () => eingangWaehlen(e);
+    box.appendChild(btn);
+  });
+}
+
+/* Zeigt im Zählbildschirm, wer gerade an welcher Tür steht.
+   Zeichnet aus den zuletzt geladenen Daten, ohne neue Abfrage –
+   dadurch bleibt "aktiv vor X Min." aktuell, ohne die Datenbank
+   im Sekundentakt zu belasten. */
+function tuerenZeichnen() {
+  const box = $('room-doors');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!bereich) return;
+
+  for (const e of eingaenge) {
+    const selbst = e.holder_token === TOKEN;
+    const besetzt = !!e.holder_token;
+
+    const c = document.createElement('span');
+    c.className = 'chip' + (selbst ? ' mine' : '') + (besetzt ? ' taken' : '');
+    c.innerHTML = '<span class="pip"></span><span class="nm"></span><span class="who"></span>';
+    c.querySelector('.nm').textContent = e.name;
+    c.querySelector('.who').textContent = besetzt
+      ? (e.held_by || '?') + (selbst ? '' : ' \u00b7 ' + seit(e.last_seen))
+      : t('ent.free');
+    box.appendChild(c);
+  }
+}
+
+/* Live: fremde Belegungen erscheinen sofort in der Liste. */
+async function entAbonnieren() {
+  if (entKanal) { await sb.removeChannel(entKanal); entKanal = null; }
+  if (!bereich) return;
+  const id = bereich.id;
+  entKanal = sb.channel(`ent:${id}`)
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'entrances', filter: `area_id=eq.${id}` },
+      (p) => {
+        // Wurde uns unser eigener Eingang weggenommen?
+        if (eingang && p.new && p.new.id === eingang.id && p.new.holder_token !== TOKEN) {
+          rausgeworfen();
+          return;
+        }
+        if ($('entrances').classList.contains('on') || $('room').classList.contains('on'))
+          eingaengeLaden();
+      })
+    .subscribe();
+}
+
+function eingangWaehlen(e) {
+  gewaehlt = e;
+  $('sheet-name-title').textContent = e.name;
+  $('claim-name').value = localStorage.getItem('inug:name') || '';
+  $('sheet-name').classList.remove('hidden');
+  $('claim-name').focus();
+}
+
+$('claim-cancel').onclick = () => { $('sheet-name').classList.add('hidden'); gewaehlt = null; };
+$('claim-name').onkeydown = (e) => { if (e.key === 'Enter') $('claim-go').click(); };
+$('claim-go').onclick = () => belegen(false);
+$('takeover-cancel').onclick = () => $('sheet-takeover').classList.add('hidden');
+$('takeover-go').onclick = () => { $('sheet-takeover').classList.add('hidden'); belegen(true); };
+
+async function belegen(erzwingen) {
+  const name = $('claim-name').value.trim();
+  if (!name || !gewaehlt) return;
+  localStorage.setItem('inug:name', name);
+
+  const { data, error } = await sb.rpc('claim_entrance', {
+    p_entrance_id: gewaehlt.id, p_name: name, p_token: TOKEN, p_force: erzwingen,
+  });
+  if (error) { alert(t('ent.claimFailed', { msg: error.message })); return; }
+
+  const r = Array.isArray(data) ? data[0] : data;
+  if (!r || !r.ok) {
+    // Besetzt – nachfragen, statt einfach zu verdrängen
+    $('sheet-name').classList.add('hidden');
+    $('takeover-title').textContent = t('ent.takeoverTitle', { name: r?.holder || '?' });
+    $('takeover-text').textContent  = t('ent.takeoverText', { when: seit(r?.last_seen) });
+    $('sheet-takeover').classList.remove('hidden');
+    return;
+  }
+
+  $('sheet-name').classList.add('hidden');
+  eingang = { id: gewaehlt.id, name: gewaehlt.name };
+  zaehlerName = name;
+  gewaehlt = null;
+  raumOeffnen(bereich);
+}
+
+/* Belegung wieder aufgeben – beim Verlassen und beim Schließen der Seite. */
+async function freigeben() {
+  clearInterval(herzTimer); herzTimer = null;
+  if (!eingang) return;
+  const id = eingang.id;
+  eingang = null;
+  try { await sb.rpc('release_entrance', { p_entrance_id: id, p_token: TOKEN }); } catch {}
+}
+
+/* Lebenszeichen: hält "aktiv vor X Min." aktuell und meldet Übernahmen
+   auch dann, wenn die Live-Verbindung gerade weg ist. */
+function herzschlagStarten() {
+  clearInterval(herzTimer);
+  herzTimer = setInterval(async () => {
+    if (!eingang) return;
+    const { data, error } = await sb.rpc('touch_entrance', {
+      p_entrance_id: eingang.id, p_token: TOKEN });
+    if (!error && data === false) rausgeworfen();
+  }, 30000);
+}
+
+async function rausgeworfen() {
+  if (!eingang) return;
+  eingang = null;
+  clearInterval(herzTimer); herzTimer = null;
+  await raumVerlassen(false);
+  alert(t('ent.kicked'));
+}
+
+/* ================================================================
    Raum
    ================================================================ */
 async function raumOeffnen(b) {
   bereich = b;
   serverStand = b.current_count;
   ausstehend = outboxLaden(b.id);
-  $('room-title').textContent = b.name;
+  $('room-title').textContent = eingang ? `${b.name} \u00b7 ${eingang.name}` : b.name;
   $('room-of').textContent = t('room.of', { max: b.max_guests });
   $('reset-confirm').classList.add('hidden');
   $('reset-ask').classList.remove('hidden');
   zeige('room');
   zeichne();
+  tuerenZeichnen();
   bildschirmWach();
 
   if (kanal) await sb.removeChannel(kanal);
   await abonnieren();
   senden();                       // liegengebliebene Klicks nachreichen
+  herzschlagStarten();
   clearInterval(abgleichTimer);
-  abgleichTimer = setInterval(() => { senden(); abgleichen(); }, 5000);
+  abgleichTimer = setInterval(() => { senden(); abgleichen(); tuerenZeichnen(); }, 5000);
 }
 
 /* Live-Verbindung zum Bereich. Bricht sie ab, wird neu verbunden –
@@ -555,7 +824,8 @@ async function senden() {
       const { data, error } = await sb.rpc('adjust_count', {
         p_area_id: bereich.id,
         p_delta: e.delta,
-        p_entrance: eingang(),
+        p_entrance_id: eingang ? eingang.id : null,
+        p_counted_by: zaehlerName || null,
         p_client_event_id: e.id,
       });
       if (error) { stockt = true; verbindung(false); break; }
@@ -576,7 +846,7 @@ async function senden() {
 function zeichne(puls) {
   if (!bereich) return;
   const wert = anzeige();
-  const z = zustand(wert, bereich.max_guests);
+  const z = zustand(wert, bereich.max_guests, bereich.warn_percent);
   document.body.className = 'state-' + z;
   const el = $('count');
   el.textContent = wert;
@@ -619,19 +889,47 @@ $('reset-yes').onclick = async () => {
   outboxSpeichern();
   serverStand = 0;
   zeichne();
-  const { error } = await sb.rpc('reset_count', { p_area_id: bereich.id, p_entrance: eingang() });
+  const { error } = await sb.rpc('reset_count', {
+    p_area_id: bereich.id,
+    p_entrance_id: eingang ? eingang.id : null,
+    p_counted_by: zaehlerName || null });
   verbindung(!error);
   if (error) alert(t('room.resetFailed'));
 };
 
-$('room-back').onclick = async () => {
-  bereich = null;
+$('room-back').onclick = () => raumVerlassen(true);
+
+async function raumVerlassen(auchFreigeben) {
   clearInterval(abgleichTimer);
   if (kanal) { await sb.removeChannel(kanal); kanal = null; }
+  if (auchFreigeben) await freigeben();
+  if (entKanal) { await sb.removeChannel(entKanal); entKanal = null; }
+  bereich = null;
+  zaehlerName = '';
+  eingaenge = [];
+  $('room-doors').innerHTML = '';
   bildschirmFrei();
   zeige('list');
   bereicheLaden();
+}
+
+$('ent-back').onclick = async () => {
+  if (entKanal) { await sb.removeChannel(entKanal); entKanal = null; }
+  bereich = null;
+  zeige('list');
+  bereicheLaden();
 };
+
+/* Beim Schließen des Tabs die Tür nicht blockiert zurücklassen. */
+window.addEventListener('pagehide', () => {
+  if (!eingang) return;
+  const url = `${SUPABASE_URL}/rest/v1/rpc/release_entrance?apikey=${SUPABASE_ANON_KEY}`;
+  const koerper = JSON.stringify({ p_entrance_id: eingang.id, p_token: TOKEN });
+  try {
+    // sendBeacon laeuft auch noch, wenn die Seite schon zu ist
+    navigator.sendBeacon(url, new Blob([koerper], { type: 'application/json' }));
+  } catch {}
+});
 
 /* Bildschirm anlassen, solange gezählt wird */
 async function bildschirmWach() {
@@ -745,6 +1043,147 @@ function verlaufSvg(rows, tag) {
       <path d="${d}" fill="none" stroke="#00C853" stroke-width="3"
             stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
     </svg>`;
+}
+
+/* ================================================================
+   Verwaltung
+   ================================================================ */
+let adminOffen = false;
+let adminDaten = [];
+
+$('admin-open').onclick = () => {
+  adminOffen = false;
+  $('admin-body').classList.add('hidden');
+  $('admin-gate').classList.remove('hidden');
+  $('admin-err').classList.add('hidden');
+  $('admin-pw').value = '';
+  zeige('admin');
+  $('admin-pw').focus();
+};
+$('admin-back').onclick = () => { adminOffen = false; zeige('list'); bereicheLaden(); };
+$('admin-pw').onkeydown = (e) => { if (e.key === 'Enter') $('admin-go').click(); };
+$('admin-pw').oninput = () => $('admin-err').classList.add('hidden');
+
+$('admin-go').onclick = async () => {
+  if ($('admin-pw').value.trim() !== ADMIN_PASSWORT) {
+    $('admin-err').classList.remove('hidden');
+    $('admin-pw').value = '';
+    return;
+  }
+  adminOffen = true;
+  $('admin-gate').classList.add('hidden');
+  $('admin-body').classList.remove('hidden');
+  await adminLaden();
+};
+
+async function adminLaden() {
+  $('admin-body').innerHTML = `<p class="dim">${t('stats.loading')}</p>`;
+  const [{ data: a, error: e1 }, { data: e, error: e2 }] = await Promise.all([
+    sb.from('areas').select('*').order('name'),
+    sb.from('entrances').select('*').order('name'),
+  ]);
+  if (e1 || e2) { $('admin-body').innerHTML = `<p class="dim">${t('stats.loadError')}</p>`; return; }
+  adminDaten = a.map(x => ({ ...x, tueren: e.filter(y => y.area_id === x.id) }));
+  adminZeichnen();
+}
+
+function adminZeichnen() {
+  const box = $('admin-body');
+  box.innerHTML = '';
+  if (adminDaten.length === 0) {
+    box.innerHTML = `<div class="empty"><b>${t('admin.noAreas')}</b></div>`;
+    return;
+  }
+
+  for (const a of adminDaten) {
+    const k = document.createElement('div');
+    k.className = 'admin-area';
+    k.innerHTML = `
+      <div class="field">
+        <label>${t('admin.areaName')}</label>
+        <input class="a-name" value="">
+      </div>
+      <div class="two">
+        <div class="field"><label>${t('admin.capacity')}</label>
+          <input class="a-max" inputmode="numeric" value="${a.max_guests}"></div>
+        <div class="field"><label>${t('admin.warn')} (${t('admin.warnUnit')})</label>
+          <input class="a-warn" inputmode="numeric" value="${a.warn_percent}"></div>
+      </div>
+      <button class="big-btn a-save" style="margin-top:4px">${t('common.save')}</button>
+      <span class="ok-flash hidden">${t('common.saved')}</span>
+
+      <div style="margin-top:22px;font-weight:700;font-size:.95rem">${t('admin.entrances')}</div>
+      <div class="t-list" style="margin-top:10px"></div>
+      <button class="ghost-btn t-add" style="margin-top:4px">${t('admin.addEntrance')}</button>`;
+
+    k.querySelector('.a-name').value = a.name;
+    const flash = k.querySelector('.ok-flash');
+
+    k.querySelector('.a-save').onclick = async () => {
+      const name = k.querySelector('.a-name').value.trim();
+      const max  = parseInt(k.querySelector('.a-max').value, 10);
+      const warn = parseInt(k.querySelector('.a-warn').value, 10);
+      if (!name || !max || max < 1 || !warn || warn < 1 || warn > 100) return;
+      const { error } = await sb.from('areas')
+        .update({ name, max_guests: max, warn_percent: warn }).eq('id', a.id);
+      if (error) { alert(t('admin.saveFailed', { msg: error.message })); return; }
+      Object.assign(a, { name, max_guests: max, warn_percent: warn });
+      flash.classList.remove('hidden');
+      setTimeout(() => flash.classList.add('hidden'), 1600);
+    };
+
+    // Türen
+    const liste = k.querySelector('.t-list');
+    for (const tuer of a.tueren) {
+      const z = document.createElement('div');
+      z.className = 'ent-edit';
+      z.innerHTML = `<input class="t-name"><button class="icon-btn t-del">${t('common.delete')}</button>`;
+      z.querySelector('.t-name').value = tuer.name;
+
+      // Umbenennen beim Verlassen des Feldes
+      z.querySelector('.t-name').onchange = async (ev) => {
+        const nm = ev.target.value.trim();
+        if (!nm || nm === tuer.name) { ev.target.value = tuer.name; return; }
+        const { error } = await sb.from('entrances').update({ name: nm }).eq('id', tuer.id);
+        if (error) { alert(t('admin.saveFailed', { msg: error.message })); ev.target.value = tuer.name; return; }
+        tuer.name = nm;
+      };
+
+      z.querySelector('.t-del').onclick = async () => {
+        if (!confirm(t('admin.deleteEntranceConfirm', { name: tuer.name }))) return;
+        await sb.from('entrances').delete().eq('id', tuer.id);
+        adminLaden();
+      };
+
+      // Belegte Tür: Hinweis und Möglichkeit, sie freizugeben
+      if (tuer.holder_token) {
+        const info = document.createElement('div');
+        info.style.cssText = 'display:flex;align-items:center;gap:10px;margin:-2px 0 10px;font-size:.8rem';
+        info.innerHTML = `<span style="color:#FFC400"></span>
+                          <button class="icon-btn t-free">${t('admin.release')}</button>`;
+        info.querySelector('span').textContent =
+          t('admin.occupiedBy', { name: tuer.held_by || '?' }) + ' \u00b7 ' + seit(tuer.last_seen);
+        info.querySelector('.t-free').onclick = async () => {
+          await sb.rpc('admin_release_entrance', { p_entrance_id: tuer.id });
+          adminLaden();
+        };
+        liste.appendChild(z);
+        liste.appendChild(info);
+      } else {
+        liste.appendChild(z);
+      }
+    }
+
+    k.querySelector('.t-add').onclick = async () => {
+      const nm = prompt(t('admin.entranceName'), t('entrance.default'));
+      if (!nm || !nm.trim()) return;
+      const { error } = await sb.from('entrances').insert({ area_id: a.id, name: nm.trim() });
+      if (error) { alert(t('admin.saveFailed', { msg: error.message })); return; }
+      adminLaden();
+    };
+
+    box.appendChild(k);
+  }
 }
 
 /* ================================================================
